@@ -1,0 +1,20 @@
+[package]
+name = "tranzistorak"
+version = "3.0.0"
+edition = "2021"
+
+[dependencies]
+yt-api = "0.3.2"
+
+[dependencies.tokio]
+version = "1.21.2"
+features = ["macros", "rt-multi-thread"]
+
+[dependencies.serenity]
+version = "0.11"
+default-features = false
+features = ["builder", "cache", "client", "gateway", "http", "model", "utils", "voice", "rustls_backend"]
+
+[dependencies.songbird]
+version = "0.3.2"
+features = ["yt-dlp"]
