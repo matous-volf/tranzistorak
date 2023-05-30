@@ -68,6 +68,8 @@ impl Player {
         let (driver, join_result) = manager.join(guild_id, voice_channel_id).await;
         join_result?;
 
+        let _ = driver.lock().await.deafen(true).await;
+
         let player = Player {
             driver,
             audio: None,
