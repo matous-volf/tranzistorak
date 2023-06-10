@@ -17,11 +17,12 @@ impl ActivityHandler {
         let mut idle_index = 0;
 
         let idle_activities = vec![
+            Activity::watching(format!("verze {}", crate::VERSION)),
             Activity::listening("/hrat"),
             Activity::playing("YouTube"),
             Activity::playing("videa i playlisty"),
-            Activity::watching(format!("verze {}", crate::VERSION)),
             Activity::playing("nově i živé přenosy!"),
+            Activity::playing("/fronta nahodne"),
         ];
 
         loop {
