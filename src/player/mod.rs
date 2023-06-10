@@ -3,6 +3,9 @@ use songbird::Event::Track;
 use songbird::TrackEvent::End;
 use songbird::tracks::TrackHandle;
 use std::sync::Arc;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+use rand::seq::SliceRandom;
 use serenity::async_trait;
 use serenity::client::{Context};
 use serenity::model::id::{ChannelId, GuildId};
@@ -54,6 +57,7 @@ pub struct Player {
     current_playing_index: Option<usize>,
     repeating: bool,
     repeating_queue: bool,
+    rng: StdRng
 }
 
 impl Player {
@@ -79,6 +83,7 @@ impl Player {
             current_playing_index: None,
             repeating: false,
             repeating_queue: false,
+            rng: StdRng::from_entropy()
         };
 
         let player = Arc::new(Mutex::new(player));
@@ -177,6 +182,11 @@ impl Player {
 
     pub async fn queue_repeat(&mut self, repeat: bool) {
         self.repeating_queue = repeat;
+    }
+
+    pub async fn queue_shuffle(&mut self) {
+        self.queue.shuffle(&mut self.rng);
+        self.play(0).await;
     }
 
     pub async fn pause(&self) {
