@@ -90,9 +90,12 @@ impl EventHandler for Handler {
                             .description("zda zapnout opakování")
                             .kind(CommandOptionType::Boolean)
                             .required(true)))
+                    .create_option(|option| option
+                        .name("nahodne")
+                        .description("Náhodně zamíchá frontu a začne přehrávat od první položky.")
+                        .kind(CommandOptionType::SubCommand))
                     .dm_permission(false)
                 )
-
                 .create_application_command(|command| command
                     .name("pauza")
                     .dm_permission(false)

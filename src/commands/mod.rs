@@ -96,6 +96,7 @@ impl CommandHandler {
 
                         self.queue_repeat(player, repeat).await
                     }
+                    "nahodne" => self.queue_shuffle(player).await,
                     _ => panic!(),
                 }
             }
@@ -223,6 +224,12 @@ impl CommandHandler {
         player.lock().await.queue_repeat(repeat).await;
         embeds::base("Ovládání", EmbedIcon::Repeat,
                      format!("Opakované přehrávání fronty je {}.", if repeat { "zapnuto" } else { "vypnuto" }).as_str())
+    }
+
+    async fn queue_shuffle(&self, player: &Arc<Mutex<Player>>) -> CreateEmbed {
+        player.lock().await.queue_shuffle().await;
+        embeds::base("Ovládání", EmbedIcon::Repeat,
+                     "Fronta byla náhodně zamíchána.")
     }
 
     async fn pause(&self, player: &Arc<Mutex<Player>>) -> CreateEmbed {
