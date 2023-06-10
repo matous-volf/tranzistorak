@@ -4,6 +4,7 @@ version = "3.0.1"
 edition = "2021"
 
 [dependencies]
+rand = "0.8.5"
 yt-api = "0.3.2"
 
 [dependencies.tokio]
