@@ -2541,6 +2541,7 @@ dependencies = [
 name = "tranzistorak"
 version = "3.0.1"
 dependencies = [
+ "rand 0.8.5",
  "serenity",
  "songbird",
  "tokio",
