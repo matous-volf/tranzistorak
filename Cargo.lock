@@ -948,6 +948,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "htmlentity"
+version = "1.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bab11d4e4796b618b77cabd8f0729eb8033891609820303af715e9306dbb95cd"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "thiserror",
+]
+
+[[package]]
 name = "http"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2541,6 +2552,7 @@ dependencies = [
 name = "tranzistorak"
 version = "3.1.0"
 dependencies = [
+ "htmlentity",
  "rand 0.8.5",
  "serenity",
  "songbird",
