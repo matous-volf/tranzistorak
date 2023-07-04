@@ -1,3 +1,4 @@
+use htmlentity::entity::{decode, ICodedDataTrait};
 use crate::player::PlayerTrack;
 use yt_api;
 
@@ -89,7 +90,7 @@ pub(crate) async fn get_tracks_from_query(query: &str) -> Option<Vec<PlayerTrack
     let video = results.first().unwrap();
 
     Some(vec![PlayerTrack::new(
-        video.snippet.title.as_ref().unwrap().to_string(),
+        decode(video.snippet.title.as_ref().unwrap().as_bytes()).to_string().unwrap(),
         format!("https://www.youtube.com/watch?v={}", video.id.video_id.as_ref().unwrap().to_string()),
         video.snippet.thumbnails.as_ref().unwrap().medium.as_ref().unwrap().url.to_string(),
     )])
