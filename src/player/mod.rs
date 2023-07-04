@@ -57,7 +57,7 @@ pub struct Player {
     current_playing_index: Option<usize>,
     repeating: bool,
     repeating_queue: bool,
-    rng: StdRng
+    rng: StdRng,
 }
 
 impl Player {
@@ -83,7 +83,7 @@ impl Player {
             current_playing_index: None,
             repeating: false,
             repeating_queue: false,
-            rng: StdRng::from_entropy()
+            rng: StdRng::from_entropy(),
         };
 
         let player = Arc::new(Mutex::new(player));
