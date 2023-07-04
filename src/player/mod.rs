@@ -190,11 +190,19 @@ impl Player {
     }
 
     pub async fn pause(&self) {
-        self.audio.as_ref().unwrap().pause().unwrap();
+        let audio = self.audio.as_ref().unwrap();
+        if audio.get_info().await.is_err() {
+            return;
+        }
+        audio.pause().unwrap();
     }
 
     pub async fn resume(&self) {
-        self.audio.as_ref().unwrap().play().unwrap();
+        let audio = self.audio.as_ref().unwrap();
+        if audio.get_info().await.is_err() {
+            return;
+        }
+        audio.play().unwrap();
     }
 
     pub async fn repeat(&mut self, repeat: bool) {
