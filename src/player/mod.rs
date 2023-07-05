@@ -15,6 +15,7 @@ use tokio::sync::Mutex;
 
 use crate::youtube;
 use crate::commands::CommandHandler;
+use crate::youtube::SearchResult;
 
 pub struct PlayerTrack {
     title: String,
@@ -95,22 +96,19 @@ impl Player {
         Ok(player)
     }
 
-    pub async fn enqueue(&mut self, query: &str) -> Option<PlayerTrack> {
-        let tracks = youtube::get_tracks_from_query(query).await?;
+    pub async fn enqueue(&mut self, query: &str) -> Option<SearchResult> {
+        let search_result = youtube::get_tracks_from_query(query).await?;
 
-        let track = tracks.first().unwrap().clone();
-        let tracks_len = tracks.len();
-
-        for track in tracks {
-            self.queue.push(track);
+        for track in search_result.tracks() {
+            self.queue.push(track.clone());
         }
 
         if self.current_playing_index.is_none() {
-            let next_playing_index = self.queue.len() - tracks_len;
+            let next_playing_index = self.queue.len() - search_result.tracks().len();
             self.play(next_playing_index).await;
         }
 
-        Some(track)
+        Some(search_result)
     }
 
     async fn play(&mut self, index: usize) {

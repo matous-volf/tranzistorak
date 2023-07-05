@@ -138,14 +138,14 @@ impl CommandHandler {
         let mut player = player.lock().await;
         let track = player.enqueue(query).await;
 
-        let track = match track {
+        let search_result = match track {
             Some(track) => track,
             None => return embeds::error("Nenalezeno", "Dle zadaného textu nebyl nalezen žádný výsledek.")
         };
 
-        let mut embed = embeds::base("Přidáno do fronty", EmbedIcon::Queue, track.title());
-        embed.url(track.url());
-        embed.thumbnail(track.thumbnail_url());
+        let mut embed = embeds::base("Přidáno do fronty", EmbedIcon::Queue, search_result.title());
+        embed.url(search_result.url());
+        embed.thumbnail(search_result.thumbnail_url());
         embed
     }
 
@@ -179,7 +179,7 @@ impl CommandHandler {
 
         let index = current_playing_index.unwrap_or(0);
         let start = max(0, index as i32 - QUEUE_VIEW_MAX_TRACKS as i32) as usize;
-        let end = min(queue.len(), index + QUEUE_VIEW_MAX_TRACKS) as usize;
+        let end = min(queue.len(), index + QUEUE_VIEW_MAX_TRACKS);
 
         let mut queue_text = String::new();
 

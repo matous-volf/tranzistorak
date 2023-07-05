@@ -3,13 +3,50 @@ use invidious::ClientAsyncTrait;
 use invidious::hidden::SearchItem;
 use rspotify::ClientCredsSpotify;
 use rspotify::clients::BaseClient;
+use rspotify::model::Id;
 use serenity::futures::StreamExt;
 use tokio::sync::Mutex;
 use crate::player::PlayerTrack;
+
 const SPOTIFY_CLIENT_ID: &str = "10f3955d28e0454da9e4e0322b787e73";
 const SPOTIFY_CLIENT_SECRET: &str = "1be82b3da0a54119b0e6f5fed63ad420";
 
 const SPOTIFY_PLAYLIST_ID_LENGTH: usize = 22;
+
+const YOUTUBE_VIDEO_BASE_URL: &str = "https://www.youtube.com/watch?v=";
+const YOUTUBE_PLAYLIST_BASE_URL: &str = "https://www.youtube.com/playlist?list=";
+
+pub struct SearchResult {
+    tracks: Vec<PlayerTrack>,
+    title: String,
+    url: String,
+    thumbnail_url: String,
+}
+
+impl SearchResult {
+    pub fn new(tracks: Vec<PlayerTrack>, title: String, url: String, thumbnail_url: String) -> Self {
+        Self {
+            tracks,
+            title,
+            url,
+            thumbnail_url,
+        }
+    }
+
+    pub fn from_player_track(track: PlayerTrack) -> Self {
+        Self {
+            title: track.title().to_string(),
+            url: track.url().to_string(),
+            thumbnail_url: track.thumbnail_url().to_string(),
+            tracks: vec![track],
+        }
+    }
+
+    pub fn tracks(&self) -> &Vec<PlayerTrack> { &self.tracks }
+    pub fn title(&self) -> &str { &self.title }
+    pub fn url(&self) -> &str { &self.url }
+    pub fn thumbnail_url(&self) -> &str { &self.thumbnail_url }
+}
 
 fn parse_youtube_playlist_id(url: &str) -> Option<String> {
     let id_start = url.find('=').and_then(|i| Some(i + 1));
@@ -44,7 +81,7 @@ fn parse_spotify_track_id(url: &str) -> Option<String> {
     None
 }
 
-async fn get_spotify_playlist(id: &str) -> Option<Vec<PlayerTrack>> {
+async fn get_spotify_playlist(id: &str) -> Option<SearchResult> {
     let creds = rspotify::Credentials::new(
         SPOTIFY_CLIENT_ID,
         SPOTIFY_CLIENT_SECRET,
@@ -54,6 +91,11 @@ async fn get_spotify_playlist(id: &str) -> Option<Vec<PlayerTrack>> {
     spotify.request_token().await.unwrap();
 
     let id = rspotify::model::PlaylistId::from_id(id).unwrap();
+
+    let playlist = match spotify.playlist(id.clone(), None, None).await {
+        Ok(playlist) => playlist,
+        Err(_) => return None,
+    };
 
     let playlist_items = spotify.playlist_items(id.clone(), None, None);
 
@@ -87,7 +129,14 @@ async fn get_spotify_playlist(id: &str) -> Option<Vec<PlayerTrack>> {
         return None;
     }
 
-    Some(tracks)
+    Some(
+        SearchResult::new(
+            tracks,
+            format!("{}", playlist.name),
+            playlist.id.url(),
+            playlist.images.first().and_then(|image| Some(image.url.clone())).unwrap_or("".to_string()),
+        )
+    )
 }
 
 async fn get_spotify_track(id: &str) -> Option<PlayerTrack> {
@@ -110,7 +159,7 @@ async fn get_spotify_track(id: &str) -> Option<PlayerTrack> {
     get_youtube_video_from_spotify_track(&track).await
 }
 
-async fn get_youtube_playlist(id: &str) -> Option<Vec<PlayerTrack>> {
+async fn get_youtube_playlist(id: &str) -> Option<SearchResult> {
     let client = invidious::ClientAsync::default();
     let playlist = match client.playlist(id, None).await {
         Err(_) => return None,
@@ -121,7 +170,7 @@ async fn get_youtube_playlist(id: &str) -> Option<Vec<PlayerTrack>> {
     for video in playlist.videos {
         tracks.push(PlayerTrack::new(
             video.title.to_string(),
-            format!("https://www.youtube.com/watch?v={}", video.id),
+            format!("{}{}", YOUTUBE_VIDEO_BASE_URL, video.id),
             video.thumbnails.first().and_then(|t| Some(t.url.clone())).unwrap_or("".to_string()),
         ));
     }
@@ -130,7 +179,12 @@ async fn get_youtube_playlist(id: &str) -> Option<Vec<PlayerTrack>> {
         return None;
     }
 
-    return Some(tracks);
+    Some(SearchResult::new(
+        tracks,
+        playlist.title,
+        format!("{}{}", YOUTUBE_PLAYLIST_BASE_URL, playlist.id),
+        playlist.thumbnail,
+    ))
 }
 
 async fn get_youtube_video(query: &str) -> Option<PlayerTrack> {
@@ -147,10 +201,12 @@ async fn get_youtube_video(query: &str) -> Option<PlayerTrack> {
 
     for result in results.iter() {
         if let SearchItem::Video { id, title, thumbnails, .. } = result {
+            let thumbnail_url = thumbnails.first().and_then(|t| Some(t.url.clone())).unwrap_or("".to_string());
+
             return Some(PlayerTrack::new(
                 title.to_string(),
-                format!("https://www.youtube.com/watch?v={}", id.to_string()),
-                thumbnails.first().and_then(|t| Some(t.url.clone())).unwrap_or("".to_string()),
+                format!("{}{}", YOUTUBE_VIDEO_BASE_URL, id.to_string()),
+                thumbnail_url.clone(),
             ));
         }
     }
@@ -165,13 +221,13 @@ async fn get_youtube_video_from_spotify_track(track: &rspotify::model::track::Fu
     get_youtube_video(query.as_str()).await
 }
 
-pub(crate) async fn get_tracks_from_query(query: &str) -> Option<Vec<PlayerTrack>> {
+pub(crate) async fn get_tracks_from_query(query: &str) -> Option<SearchResult> {
     let query = query;
 
     let id = parse_spotify_track_id(query);
     if let Some(id) = id {
         if let Some(track) = get_spotify_track(&id).await {
-            return Some(vec![track]);
+            return Some(SearchResult::from_player_track(track));
         }
     }
 
@@ -189,5 +245,5 @@ pub(crate) async fn get_tracks_from_query(query: &str) -> Option<Vec<PlayerTrack
         }
     }
 
-    Some(vec![get_youtube_video(query).await?])
+    Some(SearchResult::from_player_track(get_youtube_video(query).await?))
 }
