@@ -21,8 +21,7 @@ impl ActivityHandler {
             Activity::listening("/hrat"),
             Activity::playing("YouTube"),
             Activity::playing("videa i playlisty"),
-            Activity::playing("nově i živé přenosy!"),
-            Activity::playing("/fronta nahodne"),
+            Activity::playing("nově i Spotify!"),
         ];
 
         loop {
