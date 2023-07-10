@@ -11,7 +11,7 @@ use crate::player::PlayerTrack;
 const SPOTIFY_CLIENT_ID: &str = "10f3955d28e0454da9e4e0322b787e73";
 const SPOTIFY_CLIENT_SECRET: &str = "1be82b3da0a54119b0e6f5fed63ad420";
 
-const SPOTIFY_PLAYLIST_ID_LENGTH: usize = 22;
+const SPOTIFY_ID_LENGTH: usize = 22;
 
 const YOUTUBE_VIDEO_BASE_URL: &str = "https://www.youtube.com/watch?v=";
 const YOUTUBE_PLAYLIST_BASE_URL: &str = "https://www.youtube.com/playlist?list=";
@@ -63,7 +63,7 @@ fn parse_spotify_playlist_id(url: &str) -> Option<String> {
     let id_start = url.find("playlist/").and_then(|i| Some(i + 9));
 
     if let Some(id_start) = id_start {
-        let id_end = id_start + SPOTIFY_PLAYLIST_ID_LENGTH;
+        let id_end = id_start + SPOTIFY_ID_LENGTH;
         return Some(url[id_start..id_end].to_string());
     }
 
@@ -74,7 +74,7 @@ fn parse_spotify_track_id(url: &str) -> Option<String> {
     let id_start = url.find("track/").and_then(|i| Some(i + 6));
 
     if let Some(id_start) = id_start {
-        let id_end = id_start + SPOTIFY_PLAYLIST_ID_LENGTH;
+        let id_end = id_start + SPOTIFY_ID_LENGTH;
         return Some(url[id_start..id_end].to_string());
     }
 
