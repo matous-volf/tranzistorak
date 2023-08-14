@@ -1,5 +1,5 @@
 use songbird::error::JoinError;
-use songbird::Event::Track;
+use songbird::Event::{Core, Track};
 use songbird::TrackEvent::End;
 use songbird::tracks::TrackHandle;
 use std::sync::Arc;
@@ -10,12 +10,15 @@ use serenity::async_trait;
 use serenity::client::{Context};
 use serenity::model::id::{ChannelId, GuildId};
 use songbird::{Call, Event, EventContext};
+use songbird::CoreEvent::DriverDisconnect;
 use songbird::events::EventHandler as VoiceEventHandler;
 use tokio::sync::Mutex;
 
 use crate::youtube;
 use crate::commands::CommandHandler;
 use crate::youtube::SearchResult;
+
+const DISCONNECT_STOP_TIMEOUT_MS: u64 = 1000;
 
 pub struct PlayerTrack {
     title: String,
@@ -58,6 +61,7 @@ pub struct Player {
     current_playing_index: Option<usize>,
     repeating: bool,
     repeating_queue: bool,
+    stopped: bool,
     rng: StdRng,
 }
 
@@ -84,14 +88,18 @@ impl Player {
             current_playing_index: None,
             repeating: false,
             repeating_queue: false,
+            stopped: false,
             rng: StdRng::from_entropy(),
         };
 
         let player = Arc::new(Mutex::new(player));
 
-        player.clone().lock().await
-            .driver.lock().await
-            .add_global_event(Track(End), TrackEndHandler::new(player.clone()));
+        let player_clone = player.clone();
+        let player_clone = player_clone.lock().await;
+        let mut driver = player_clone.driver.lock().await;
+
+        driver.add_global_event(Track(End), TrackEndHandler::new(player.clone()));
+        driver.add_global_event(Core(DriverDisconnect), DriverDisconnectHandler::new(player.clone()));
 
         Ok(player)
     }
@@ -210,8 +218,11 @@ impl Player {
     pub async fn stop(&mut self) {
         let mut driver = self.driver.lock().await;
 
+        self.stopped = true;
+
         driver.stop();
         let _ = driver.leave().await;
+        driver.remove_all_global_events();
     }
 
     async fn track_ended(&mut self) {
@@ -229,8 +240,16 @@ impl Player {
         };
     }
 
+    async fn disconnected(&mut self) {
+        tokio::time::sleep(tokio::time::Duration::from_millis(DISCONNECT_STOP_TIMEOUT_MS)).await;
+
+        if self.driver.lock().await.current_connection().is_none() {
+            self.stop().await;
+        }
+    }
+
     pub async fn is_stopped(&self) -> bool {
-        self.driver.lock().await.current_connection().is_none()
+        self.stopped
     }
 
     pub fn current_playing_index(&self) -> Option<usize> {
@@ -264,6 +283,24 @@ impl TrackEndHandler {
 impl VoiceEventHandler for TrackEndHandler {
     async fn act(&self, _: &EventContext<'_>) -> Option<Event> {
         self.player.lock().await.track_ended().await;
+        None
+    }
+}
+
+struct DriverDisconnectHandler {
+    player: Arc<Mutex<Player>>,
+}
+
+impl DriverDisconnectHandler {
+    fn new(player: Arc<Mutex<Player>>) -> DriverDisconnectHandler {
+        DriverDisconnectHandler { player }
+    }
+}
+
+#[async_trait]
+impl VoiceEventHandler for DriverDisconnectHandler {
+    async fn act(&self, _: &EventContext<'_>) -> Option<Event> {
+        self.player.lock().await.disconnected().await;
         None
     }
 }
