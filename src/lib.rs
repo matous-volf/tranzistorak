@@ -127,15 +127,15 @@ impl EventHandler for Handler {
 
     async fn interaction_create(&self, context: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
-            let mut command_handler = self.command_handler.lock().await;
-            let response = command_handler.handle(&context, &command);
-
             _ = command
                 .create_interaction_response(&context.http, |response| {
                     response
                         .kind(InteractionResponseType::DeferredChannelMessageWithSource)
                 })
                 .await;
+
+            let mut command_handler = self.command_handler.lock().await;
+            let response = command_handler.handle(&context, &command);
 
             let embed = response.await;
 
