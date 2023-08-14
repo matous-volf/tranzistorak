@@ -200,12 +200,12 @@ async fn get_youtube_video(query: &str) -> Option<PlayerTrack> {
     }
 
     for result in results.iter() {
-        if let SearchItem::Video { id, title, thumbnails, .. } = result {
-            let thumbnail_url = thumbnails.first().and_then(|t| Some(t.url.clone())).unwrap_or("".to_string());
+        if let SearchItem::Video(video) = result {
+            let thumbnail_url = video.thumbnails.first().and_then(|t| Some(t.url.clone())).unwrap_or("".to_string());
 
             return Some(PlayerTrack::new(
-                title.to_string(),
-                format!("{}{}", YOUTUBE_VIDEO_BASE_URL, id.to_string()),
+                video.title.to_string(),
+                format!("{}{}", YOUTUBE_VIDEO_BASE_URL, video.id.to_string()),
                 thumbnail_url.clone(),
             ));
         }
