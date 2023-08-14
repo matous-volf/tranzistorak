@@ -16,7 +16,7 @@ use crate::embeds::{EmbedIcon};
 const QUEUE_VIEW_MAX_TRACKS: usize = 15;
 
 pub struct CommandHandler {
-    players: HashMap<GuildId, Arc<Mutex<Player>>>,
+    players: HashMap<u64, Arc<Mutex<Player>>>,
 }
 
 impl CommandHandler {
@@ -41,7 +41,7 @@ impl CommandHandler {
             }
         };
 
-        let player = self.players.get(&guild.id);
+        let player = self.players.get(&guild.id.0);
 
         if player.is_none() || player.unwrap().lock().await.is_stopped().await {
             if command.data.name != "hrat" {
@@ -65,7 +65,7 @@ impl CommandHandler {
             }
         }
 
-        let player = self.players.get(&guild.id).unwrap();
+        let player = self.players.get(&guild.id.0).unwrap();
         player.lock().await.set_text_channel_id(text_channel_id);
 
         match command.data.name.as_str() {
@@ -129,7 +129,7 @@ impl CommandHandler {
             Err(_) => return Err(()),
         };
 
-        self.players.insert(guild_id, new_player).as_ref();
+        self.players.insert(guild_id.0, new_player).as_ref();
 
         Ok(())
     }
