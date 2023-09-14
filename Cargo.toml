@@ -4,6 +4,7 @@ version = "3.2.1"
 edition = "2021"
 
 [dependencies]
+dotenv = "0.15.0"
 invidious = { version = "0.7.0", features = ["reqwest_async"]}
 rand = "0.8.5"
 rspotify = "0.11.7"
