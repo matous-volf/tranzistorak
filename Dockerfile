@@ -7,7 +7,7 @@ RUN apt-get install -y cmake
 
 RUN cargo install --path .
 
-RUN rm -rf /usr/src/tranzistorak
+#RUN rm -rf /usr/src/tranzistorak
 
 #FROM debian:bullseye-slim
 
