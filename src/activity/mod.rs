@@ -19,9 +19,10 @@ impl ActivityHandler {
         let idle_activities = vec![
             Activity::watching(format!("verze {}", crate::VERSION)),
             Activity::listening("/hrat"),
-            Activity::playing("YouTube"),
+            Activity::playing("YouTube a Spotify"),
             Activity::playing("videa i playlisty"),
-            Activity::playing("nově i Spotify!"),
+            Activity::playing("nově opensource!"),
+            Activity::playing("github.com/matous-volf/tranzistorak"),
         ];
 
         loop {
