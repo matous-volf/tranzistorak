@@ -1,3 +1,4 @@
+use std::env;
 use std::sync::{Arc};
 use invidious::ClientAsyncTrait;
 use invidious::hidden::SearchItem;
@@ -7,9 +8,6 @@ use rspotify::model::Id;
 use serenity::futures::StreamExt;
 use tokio::sync::Mutex;
 use crate::player::PlayerTrack;
-
-const SPOTIFY_CLIENT_ID: &str = "10f3955d28e0454da9e4e0322b787e73";
-const SPOTIFY_CLIENT_SECRET: &str = "1be82b3da0a54119b0e6f5fed63ad420";
 
 const SPOTIFY_ID_LENGTH: usize = 22;
 
@@ -83,8 +81,8 @@ fn parse_spotify_track_id(url: &str) -> Option<String> {
 
 async fn get_spotify_playlist(id: &str) -> Option<SearchResult> {
     let creds = rspotify::Credentials::new(
-        SPOTIFY_CLIENT_ID,
-        SPOTIFY_CLIENT_SECRET,
+        &env::var("SPOTIFY_CLIENT_ID").unwrap(),
+        &env::var("SPOTIFY_CLIENT_SECRET").unwrap(),
     );
 
     let spotify = ClientCredsSpotify::new(creds);
@@ -141,8 +139,8 @@ async fn get_spotify_playlist(id: &str) -> Option<SearchResult> {
 
 async fn get_spotify_track(id: &str) -> Option<PlayerTrack> {
     let creds = rspotify::Credentials::new(
-        SPOTIFY_CLIENT_ID,
-        SPOTIFY_CLIENT_SECRET,
+        &env::var("SPOTIFY_CLIENT_ID").unwrap(),
+        &env::var("SPOTIFY_CLIENT_SECRET").unwrap(),
     );
 
     let spotify = ClientCredsSpotify::new(creds);
