@@ -1,7 +1,11 @@
+use std::env;
+use dotenv::dotenv;
 use tranzistorak::run;
 
 #[tokio::main]
 async fn main() {
-    let token = "";
+    dotenv().unwrap();
+
+    let token = &env::var("DISCORD_TOKEN").unwrap();
     run(token).await;
 }
