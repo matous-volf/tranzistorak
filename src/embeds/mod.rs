@@ -1,7 +1,7 @@
 use serenity::builder::CreateEmbed;
 use serenity::utils::Color;
 
-const ICONS_BASE_URL: &str = "https://matousvolf.cz/tranzistorak-icons/";
+const ICONS_BASE_URL: &str = "https://raw.githubusercontent.com/matous-volf/tranzistorak/main/icons/";
 
 pub fn error(author_text: &str, title: &str) -> CreateEmbed {
     let mut embed = base(author_text, EmbedIcon::Error, title);
