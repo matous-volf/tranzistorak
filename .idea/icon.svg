@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 513 513">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #bf9300;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8, .cls-9 {
+        stroke-width: 0px;
+      }
+
+      .cls-2 {
+        fill: #c49700;
+      }
+
+      .cls-3 {
+        fill: #8d9099;
+      }
+
+      .cls-4 {
+        fill: #9c6615;
+      }
+
+      .cls-5 {
+        fill: #cdd1de;
+      }
+
+      .cls-6 {
+        fill: #413620;
+      }
+
+      .cls-7 {
+        fill: #70470a;
+      }
+
+      .cls-8 {
+        fill: #292213;
+      }
+
+      .cls-9 {
+        fill: #ffc400;
+      }
+    </style>
+  </defs>
+  <rect class="cls-5" x="72.68" y="127.82" width="456.15" height="56.89" transform="translate(118.42 -129.44) rotate(30)"/>
+  <rect class="cls-4" x="85.83" y="203.91" width="426.67" height="284.44"/>
+  <rect class="cls-7" x=".5" y="203.91" width="85.33" height="284.44"/>
+  <path class="cls-7" d="M250.81,252.26h58.96c8.28,0,15,6.72,15,15v169.11c0,8.28-6.72,15-15,15h-58.96v-199.11h0Z"/>
+  <rect class="cls-6" x="134.19" y="252.26" width="153.6" height="199.11" rx="15" ry="15"/>
+  <rect class="cls-8" x="151.26" y="252.26" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="219.52" y="252.26" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="134.19" y="292.09" width="17.07" height="39.82"/>
+  <rect class="cls-8" x="185.39" y="292.09" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="253.66" y="292.09" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="151.26" y="331.91" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="219.52" y="331.91" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="134.19" y="371.73" width="17.07" height="39.82"/>
+  <rect class="cls-8" x="185.39" y="371.73" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="253.66" y="371.73" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="151.26" y="411.55" width="34.13" height="39.82"/>
+  <rect class="cls-8" x="219.52" y="411.55" width="34.13" height="39.82"/>
+  <rect class="cls-2" x="397.33" y="294.93" width="51.17" height="113.78" rx="7.27" ry="7.27"/>
+  <ellipse class="cls-1" cx="405.83" cy="351.82" rx="49.78" ry="56.89"/>
+  <ellipse class="cls-9" cx="441.81" cy="351.82" rx="49.78" ry="56.89"/>
+  <ellipse class="cls-3" cx="103.29" cy="42.25" rx="28.44" ry="24.89" transform="translate(15.05 110.58) rotate(-60)"/>
+</svg>
