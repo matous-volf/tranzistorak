@@ -220,8 +220,6 @@ async fn get_youtube_video_from_spotify_track(track: &rspotify::model::track::Fu
 }
 
 pub(crate) async fn get_tracks_from_query(query: &str) -> Option<SearchResult> {
-    let query = query;
-
     let id = parse_spotify_track_id(query);
     if let Some(id) = id {
         if let Some(track) = get_spotify_track(&id).await {
