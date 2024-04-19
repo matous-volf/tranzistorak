@@ -13,6 +13,7 @@ mio = "0.8.11"
 tungstenite = "0.20.1"
 h2 = "0.3.26"
 openssl = "0.10.60"
+rustix = "0.38.19"
 
 [dependencies.tokio]
 version = "1.21.2"
