@@ -7,7 +7,12 @@ edition = "2021"
 dotenv = "0.15.0"
 invidious = { version = "0.7.0", features = ["reqwest_async"]}
 rand = "0.8.5"
-rspotify = "0.11.7"
+rspotify = "0.13.1"
+rustls = "0.21.11"
+mio = "0.8.11"
+tungstenite = "0.20.1"
+h2 = "0.3.26"
+openssl = "0.10.60"
 
 [dependencies.tokio]
 version = "1.21.2"

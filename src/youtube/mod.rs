@@ -147,7 +147,7 @@ async fn get_spotify_track(id: &str) -> Option<PlayerTrack> {
     spotify.request_token().await.unwrap();
 
     let id = rspotify::model::TrackId::from_id(id).unwrap();
-    let track = spotify.track(id).await;
+    let track = spotify.track(id, None).await;
 
     let track = match track {
         Ok(track) => track,
