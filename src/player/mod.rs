@@ -1,21 +1,23 @@
-use songbird::error::JoinError;
-use songbird::Event::{Core, Track};
-use songbird::TrackEvent::End;
-use songbird::tracks::TrackHandle;
 use std::sync::Arc;
+
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use serenity::async_trait;
-use serenity::client::{Context};
+use serenity::client::Context;
 use serenity::model::id::{ChannelId, GuildId};
 use songbird::{Call, Event, EventContext};
 use songbird::CoreEvent::DriverDisconnect;
+use songbird::error::JoinError;
+use songbird::Event::{Core, Track};
 use songbird::events::EventHandler as VoiceEventHandler;
+use songbird::input::YoutubeDl;
+use songbird::TrackEvent::End;
+use songbird::tracks::TrackHandle;
 use tokio::sync::Mutex;
 
-use crate::youtube;
 use crate::commands::CommandHandler;
+use crate::youtube;
 use crate::youtube::SearchResult;
 
 const DISCONNECT_STOP_TIMEOUT_MS: u64 = 1000;
@@ -70,20 +72,19 @@ impl Player {
         guild_id: GuildId,
         voice_channel_id: ChannelId,
         text_channel_id: ChannelId,
-        context: &Context)
-        -> Result<Arc<Mutex<Player>>, JoinError> {
+        context: Context,
+    ) -> Result<Arc<Mutex<Player>>, JoinError> {
         let manager = songbird::get(&context).await.unwrap().clone();
 
-        let (driver, join_result) = manager.join(guild_id, voice_channel_id).await;
-        join_result?;
+        let driver = manager.join(guild_id, voice_channel_id).await?;
 
-        let _ = driver.lock().await.deafen(true).await;
+        driver.lock().await.deafen(true).await.unwrap();
 
         let player = Player {
             driver,
             audio: None,
             text_channel_id,
-            context: context.clone(),
+            context,
             queue: Vec::new(),
             current_playing_index: None,
             repeating: false,
@@ -126,16 +127,12 @@ impl Player {
         self.current_playing_index = Some(index);
         let track = &self.queue[index];
 
-        let source = match songbird::ytdl(&track.url).await {
-            Ok(source) => source,
-            Err(_) => return
-        };
+        let youtube_dl = YoutubeDl::new(reqwest::Client::new(), track.url.clone());
 
-        let (audio, audio_handle) = songbird::create_player(source);
+        let audio_handle = driver.play_only_input(youtube_dl.into());
         self.audio = Some(audio_handle);
 
-        driver.play_only(audio);
-        CommandHandler::track_started_playing(&self, track, self.context.clone()).await;
+        CommandHandler::track_started_playing(self, track, self.context.clone()).await;
     }
 
     pub async fn next(&mut self) -> Result<(), ()> {

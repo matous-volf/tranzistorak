@@ -1,26 +1,20 @@
-use serenity::builder::CreateEmbed;
-use serenity::utils::Color;
+use serenity::builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter};
+use serenity::model::Color;
 
 const ICONS_BASE_URL: &str = "https://raw.githubusercontent.com/matous-volf/tranzistorak/main/icons/";
 
 pub fn error(author_text: &str, title: &str) -> CreateEmbed {
-    let mut embed = base(author_text, EmbedIcon::Error, title);
-    embed.color(Color::RED);
-    embed
+    base(author_text, EmbedIcon::Error, title)
+        .color(Color::RED)
 }
 
 pub fn base(author_text: &str, author_icon: EmbedIcon, title: &str) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed
-        .footer(|footer| footer
-            .text(format!("Tranzistorák v{}", crate::VERSION))
+    CreateEmbed::new()
+        .footer(CreateEmbedFooter::new(format!("Tranzistorák v{}", crate::VERSION))
             .icon_url(EmbedIcon::Bot.url()))
-        .author(|author|
-            author.name(author_text)
-                .icon_url(author_icon.url()))
-        .title(title);
-
-    embed
+        .author(CreateEmbedAuthor::new(author_text)
+            .icon_url(author_icon.url()))
+        .title(title)
 }
 
 pub enum EmbedIcon {
