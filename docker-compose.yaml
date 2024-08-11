@@ -1,0 +1,12 @@
+services:
+  tranzistorak:
+    container_name: tranzistorak
+    build: .
+    restart: always
+    networks:
+      - default
+
+networks:
+  default:
+    driver:
+      bridge
