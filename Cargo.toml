@@ -16,7 +16,6 @@ openssl = "0.10.60"
 rustix = "0.38.19"
 reqwest = "0.11.27"
 tracing-subscriber = "0.3.18"
-symphonia = "0.5.2"
 
 [dependencies.tokio]
 version = "1.21.2"
@@ -29,3 +28,7 @@ features = ["builder", "cache", "client", "gateway", "http", "model", "utils", "
 
 [dependencies.songbird]
 version = "0.4.3"
+
+[dependencies.symphonia]
+version = "0.5.4"
+features = ["all"]
