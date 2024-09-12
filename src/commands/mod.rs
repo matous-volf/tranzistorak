@@ -208,7 +208,7 @@ impl CommandHandler {
         }
 
         if end != queue.len() {
-            queue_text.push_str(format!("*následjících: {}*\n", queue.len() - end).as_str());
+            queue_text.push_str(format!("*následujících: {}*\n", queue.len() - end).as_str());
         }
 
         embeds::base("Fronta", EmbedIcon::Queue, "Položky ve frontě:")
