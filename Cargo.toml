@@ -22,3 +22,7 @@ features = ["builder", "cache", "client", "gateway", "http", "model", "utils", "
 
 [dependencies.songbird]
 version = "0.4.6"
+
+[dependencies.symphonia]
+version = "0.5.4"
+features = ["all"]
