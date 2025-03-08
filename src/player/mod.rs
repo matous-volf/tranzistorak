@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use rand::rngs::StdRng;
-use rand::SeedableRng;
 use rand::seq::SliceRandom;
+use rand::SeedableRng;
 use serenity::async_trait;
 use serenity::client::Context;
 use serenity::model::id::{ChannelId, GuildId};
-use songbird::{Call, Event, EventContext};
-use songbird::CoreEvent::DriverDisconnect;
 use songbird::error::JoinError;
-use songbird::Event::{Core, Track};
 use songbird::events::EventHandler as VoiceEventHandler;
 use songbird::input::YoutubeDl;
-use songbird::TrackEvent::End;
 use songbird::tracks::TrackHandle;
+use songbird::CoreEvent::DriverDisconnect;
+use songbird::Event::{Core, Track};
+use songbird::TrackEvent::End;
+use songbird::{Call, Event, EventContext};
 use tokio::sync::Mutex;
 
 use crate::commands::CommandHandler;
@@ -30,7 +30,11 @@ pub struct PlayerTrack {
 
 impl PlayerTrack {
     pub fn new(title: String, url: String, thumbnail_url: String) -> PlayerTrack {
-        PlayerTrack { title, url, thumbnail_url }
+        PlayerTrack {
+            title,
+            url,
+            thumbnail_url,
+        }
     }
 
     pub fn title(&self) -> &str {
@@ -90,7 +94,7 @@ impl Player {
             repeating: false,
             repeating_queue: false,
             stopped: false,
-            rng: StdRng::from_entropy(),
+            rng: StdRng::from_os_rng(),
         };
 
         let player = Arc::new(Mutex::new(player));
@@ -100,7 +104,10 @@ impl Player {
         let mut driver = player_clone.driver.lock().await;
 
         driver.add_global_event(Track(End), TrackEndHandler::new(player.clone()));
-        driver.add_global_event(Core(DriverDisconnect), DriverDisconnectHandler::new(player.clone()));
+        driver.add_global_event(
+            Core(DriverDisconnect),
+            DriverDisconnectHandler::new(player.clone()),
+        );
 
         Ok(player)
     }
@@ -238,7 +245,10 @@ impl Player {
     }
 
     async fn disconnected(&mut self) {
-        tokio::time::sleep(tokio::time::Duration::from_millis(DISCONNECT_STOP_TIMEOUT_MS)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(
+            DISCONNECT_STOP_TIMEOUT_MS,
+        ))
+        .await;
 
         if self.driver.lock().await.current_connection().is_none() {
             self.stop().await;
@@ -254,7 +264,13 @@ impl Player {
     }
 
     pub async fn voice_channel_id(&self) -> songbird::id::ChannelId {
-        self.driver.lock().await.current_connection().unwrap().channel_id.unwrap()
+        self.driver
+            .lock()
+            .await
+            .current_connection()
+            .unwrap()
+            .channel_id
+            .unwrap()
     }
 
     pub fn text_channel_id(&self) -> ChannelId {
