@@ -23,7 +23,7 @@ impl ActivityHandler {
             ActivityData::listening("/hrat"),
             ActivityData::playing("YouTube a Spotify"),
             ActivityData::playing("videa i playlisty"),
-            ActivityData::playing("nově opensource!"),
+            ActivityData::playing("svobodný a otevřený software!"),
             ActivityData::playing("github.com/matous-volf/tranzistorak"),
         ];
 
