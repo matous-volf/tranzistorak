@@ -1,5 +1,5 @@
-use std::env;
 use dotenv::dotenv;
+use std::env;
 use tranzistorak::run;
 
 #[tokio::main]
