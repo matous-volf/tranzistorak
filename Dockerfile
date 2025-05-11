@@ -24,6 +24,7 @@ RUN apt-get update \
 COPY --from=builder /usr/local/cargo/bin/tranzistorak /usr/local/bin/tranzistorak
 COPY ./.env /usr/local/bin/.env
 
+RUN useradd -m -u 1000 botuser
 USER botuser
 
 #checkov:skip=CKV_DOCKER_2: No healthcheck.
