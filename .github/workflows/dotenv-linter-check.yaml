@@ -1,0 +1,46 @@
+---
+name: dotenv-linter check
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  build:
+    name: dotenv-linter check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: read
+      statuses: write
+    steps:
+      - name: dotenv-linter installation
+        run: |
+          EXECUTABLE_DIRECTORY="$HOME/bin"
+          mkdir -p "$EXECUTABLE_DIRECTORY"
+          cd "$EXECUTABLE_DIRECTORY"
+          echo "$EXECUTABLE_DIRECTORY" >> "$GITHUB_PATH"
+
+          set -e
+
+          INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/dotenv-linter/dotenv-linter/ced5b9b28d9a1a309fe900cb992d69dba91205dc/install.sh"
+          DOTENV_LINTER_VERSION="v3.3.0"
+
+          INSTALL_SCRIPT_CHECKSUM="3b883cbc2bc3b48b6acd794802326a50fcbfeff7d5cd61e457c54fd6072bd809  dotenv-linter-install.sh"
+          DOTENV_LINTER_CHECKSUM="cfd8c16319d8ebfd7849016ed381f239e5e26e4ea5d957a26e32c12813658f26  dotenv-linter"
+
+          wget -O dotenv-linter-install.sh "$INSTALL_SCRIPT_URL"
+          echo "$INSTALL_SCRIPT_CHECKSUM" | sha256sum --check
+
+          chmod +x dotenv-linter-install.sh
+          sh dotenv-linter-install.sh -- -b . "$DOTENV_LINTER_VERSION"
+          echo "$DOTENV_LINTER_CHECKSUM" | sha256sum --check
+      - name: code checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: dotenv-linter check
+        run: dotenv-linter

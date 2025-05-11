@@ -27,17 +27,27 @@ impl CommandHandler {
     }
 
     pub async fn handle(&mut self, context: &Context, command: &CommandInteraction) -> CreateEmbed {
-        let guild = command.guild_id.unwrap().to_guild_cached(&context.cache).ok_or(()).unwrap().clone();
+        let guild = command
+            .guild_id
+            .unwrap()
+            .to_guild_cached(&context.cache)
+            .ok_or(())
+            .unwrap()
+            .clone();
         let text_channel_id = command.channel_id;
 
         let voice_channel_id = guild
-            .voice_states.get(&command.user.id)
+            .voice_states
+            .get(&command.user.id)
             .and_then(|voice_state| voice_state.channel_id);
 
         let voice_channel_id = match voice_channel_id {
             Some(channel) => channel,
             None => {
-                return embeds::error("Ovládání", "Pro ovládání je nutné se připojit do hlasového kanálu.");
+                return embeds::error(
+                    "Ovládání",
+                    "Pro ovládání je nutné se připojit do hlasového kanálu.",
+                );
             }
         };
 
@@ -46,12 +56,11 @@ impl CommandHandler {
         if player.is_none() || player.unwrap().lock().await.is_stopped().await {
             if command.data.name != "hrat" {
                 return embeds::error("Ovládání", "Neprobíhá přehrávání.");
-            } else if self.create_player(
-                guild.id,
-                voice_channel_id,
-                text_channel_id,
-                context,
-            ).await.is_err() {
+            } else if self
+                .create_player(guild.id, voice_channel_id, text_channel_id, context)
+                .await
+                .is_err()
+            {
                 return embeds::error("Chyba", "Nebylo možné připojit se do hlasového kanálu.");
             }
         } else if let Some(player) = player {
@@ -75,39 +84,41 @@ impl CommandHandler {
 
                 self.play(player, query).await
             }
-            "fronta" => {
-                match command.data.options.first().unwrap().name.as_str() {
-                    "zobrazit" => self.queue_view(player).await,
-                    "posunout" => {
-                        let index = match &command.data.options.first().unwrap().value {
-                            CommandDataOptionValue::SubCommand(options) => {
-                                match options.first().unwrap().value {
-                                    CommandDataOptionValue::Integer(value) => (value - 1) as usize,
-                                    _ => panic!(),
-                                }
+            "fronta" => match command.data.options.first().unwrap().name.as_str() {
+                "zobrazit" => self.queue_view(player).await,
+                "posunout" => {
+                    let index = match &command.data.options.first().unwrap().value {
+                        CommandDataOptionValue::SubCommand(options) => {
+                            match options.first().unwrap().value {
+                                CommandDataOptionValue::Integer(value) => (value - 1) as usize,
+                                _ => panic!(),
                             }
-                            _ => { panic!() }
-                        };
+                        }
+                        _ => {
+                            panic!()
+                        }
+                    };
 
-                        self.queue_move(player, index).await
-                    }
-                    "opakovat" => {
-                        let repeat = match &command.data.options.first().unwrap().value {
-                            CommandDataOptionValue::SubCommand(options) => {
-                                match options.first().unwrap().value {
-                                    CommandDataOptionValue::Boolean(value) => value,
-                                    _ => panic!(),
-                                }
-                            }
-                            _ => { panic!() }
-                        };
-
-                        self.queue_repeat(player, repeat).await
-                    }
-                    "nahodne" => self.queue_shuffle(player).await,
-                    _ => panic!(),
+                    self.queue_move(player, index).await
                 }
-            }
+                "opakovat" => {
+                    let repeat = match &command.data.options.first().unwrap().value {
+                        CommandDataOptionValue::SubCommand(options) => {
+                            match options.first().unwrap().value {
+                                CommandDataOptionValue::Boolean(value) => value,
+                                _ => panic!(),
+                            }
+                        }
+                        _ => {
+                            panic!()
+                        }
+                    };
+
+                    self.queue_repeat(player, repeat).await
+                }
+                "nahodne" => self.queue_shuffle(player).await,
+                _ => panic!(),
+            },
             "dalsi" => self.next(player).await,
             "predchozi" => self.previous(player).await,
             "pauza" => self.pause(player).await,
@@ -121,17 +132,19 @@ impl CommandHandler {
                 self.repeat(player, repeat).await
             }
             "stop" => self.stop(player).await,
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
-    async fn create_player(&mut self, guild_id: GuildId, voice_channel_id: ChannelId, text_channel_id: ChannelId, context: &Context) -> Result<(), ()> {
-        let new_player = Player::new(
-            guild_id,
-            voice_channel_id,
-            text_channel_id,
-            context.clone(),
-        ).await;
+    async fn create_player(
+        &mut self,
+        guild_id: GuildId,
+        voice_channel_id: ChannelId,
+        text_channel_id: ChannelId,
+        context: &Context,
+    ) -> Result<(), ()> {
+        let new_player =
+            Player::new(guild_id, voice_channel_id, text_channel_id, context.clone()).await;
 
         let new_player = match new_player {
             Ok(player) => player,
@@ -149,7 +162,12 @@ impl CommandHandler {
 
         let search_result = match track {
             Some(track) => track,
-            None => return embeds::error("Nenalezeno", "Dle zadaného textu nebyl nalezen žádný výsledek.")
+            None => {
+                return embeds::error(
+                    "Nenalezeno",
+                    "Dle zadaného textu nebyl nalezen žádný výsledek.",
+                )
+            }
         };
 
         embeds::base("Přidáno do fronty", EmbedIcon::Queue, search_result.title())
@@ -163,20 +181,30 @@ impl CommandHandler {
         let embed = embeds::base("Přehrávání", EmbedIcon::YouTube, track.title())
             .url(track.url())
             .thumbnail(track.thumbnail_url());
-        _ = player.text_channel_id().send_message(context.http, CreateMessage::new().embed(embed)).await;
+        _ = player
+            .text_channel_id()
+            .send_message(context.http, CreateMessage::new().embed(embed))
+            .await;
     }
 
     async fn next(&self, player: &Arc<Mutex<Player>>) -> CreateEmbed {
         match player.lock().await.next().await {
             Err(_) => embeds::error("Ovládání", "Ve frontě se nenachází žádné další položky."),
-            Ok(()) => embeds::base("Ovládání", EmbedIcon::Next, "Přehrávání další položky.")
+            Ok(()) => embeds::base("Ovládání", EmbedIcon::Next, "Přehrávání další položky."),
         }
     }
 
     async fn previous(&self, player: &Arc<Mutex<Player>>) -> CreateEmbed {
         match player.lock().await.previous().await {
-            Err(_) => embeds::error("Ovládání", "Ve frontě se nenachází žádné předchozí položky."),
-            Ok(()) => embeds::base("Ovládání", EmbedIcon::Previous, "Přehrávání předchozí položky.")
+            Err(_) => embeds::error(
+                "Ovládání",
+                "Ve frontě se nenachází žádné předchozí položky.",
+            ),
+            Ok(()) => embeds::base(
+                "Ovládání",
+                EmbedIcon::Previous,
+                "Přehrávání předchozí položky.",
+            ),
         }
     }
 
@@ -196,7 +224,8 @@ impl CommandHandler {
         }
 
         for (i, track) in queue.iter().skip(start).take(end - start).enumerate() {
-            let mut track_text = format!("{}. [{}]({})\n", start + i + 1, track.title(), track.url());
+            let mut track_text =
+                format!("{}. [{}]({})\n", start + i + 1, track.title(), track.url());
 
             if let Some(index) = current_playing_index {
                 if index == start + i {
@@ -211,31 +240,43 @@ impl CommandHandler {
             queue_text.push_str(format!("*následujících: {}*\n", queue.len() - end).as_str());
         }
 
-        embeds::base("Fronta", EmbedIcon::Queue, "Položky ve frontě:")
-            .description(queue_text)
+        embeds::base("Fronta", EmbedIcon::Queue, "Položky ve frontě:").description(queue_text)
     }
 
     async fn queue_move(&self, player: &Arc<Mutex<Player>>, index: usize) -> CreateEmbed {
         match player.lock().await.queue_move(index).await {
-            Err(_) => {
-                embeds::error("Fronta", format!("Fronta {}. pozici neobsahuje.", index + 1).as_str())
-            }
-            Ok(()) => {
-                embeds::base("Fronta", EmbedIcon::Queue, format!("Přehrávání posunuto na {}. pozici ve frontě.", index + 1).as_str())
-            }
+            Err(_) => embeds::error(
+                "Fronta",
+                format!("Fronta {}. pozici neobsahuje.", index + 1).as_str(),
+            ),
+            Ok(()) => embeds::base(
+                "Fronta",
+                EmbedIcon::Queue,
+                format!("Přehrávání posunuto na {}. pozici ve frontě.", index + 1).as_str(),
+            ),
         }
     }
 
     async fn queue_repeat(&self, player: &Arc<Mutex<Player>>, repeat: bool) -> CreateEmbed {
         player.lock().await.queue_repeat(repeat).await;
-        embeds::base("Ovládání", EmbedIcon::Repeat,
-                     format!("Opakované přehrávání fronty je {}.", if repeat { "zapnuto" } else { "vypnuto" }).as_str())
+        embeds::base(
+            "Ovládání",
+            EmbedIcon::Repeat,
+            format!(
+                "Opakované přehrávání fronty je {}.",
+                if repeat { "zapnuto" } else { "vypnuto" }
+            )
+            .as_str(),
+        )
     }
 
     async fn queue_shuffle(&self, player: &Arc<Mutex<Player>>) -> CreateEmbed {
         player.lock().await.queue_shuffle().await;
-        embeds::base("Ovládání", EmbedIcon::Repeat,
-                     "Fronta byla náhodně zamíchána.")
+        embeds::base(
+            "Ovládání",
+            EmbedIcon::Repeat,
+            "Fronta byla náhodně zamíchána.",
+        )
     }
 
     async fn pause(&self, player: &Arc<Mutex<Player>>) -> CreateEmbed {
@@ -250,8 +291,15 @@ impl CommandHandler {
 
     async fn repeat(&self, player: &Arc<Mutex<Player>>, repeat: bool) -> CreateEmbed {
         player.lock().await.repeat(repeat).await;
-        embeds::base("Ovládání", EmbedIcon::Repeat,
-                     format!("Opakované přehrávání aktuální položky je {}.", if repeat { "zapnuto" } else { "vypnuto" }).as_str())
+        embeds::base(
+            "Ovládání",
+            EmbedIcon::Repeat,
+            format!(
+                "Opakované přehrávání aktuální položky je {}.",
+                if repeat { "zapnuto" } else { "vypnuto" }
+            )
+            .as_str(),
+        )
     }
 
     async fn stop(&self, player: &Arc<Mutex<Player>>) -> CreateEmbed {

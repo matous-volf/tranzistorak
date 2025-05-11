@@ -1,0 +1,24 @@
+---
+name: conventional pull request title check
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  build:
+    name: conventional pull request title check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: read
+      statuses: write
+    steps:
+      - name: conventional pull request title check
+        uses: ytanikin/PRConventionalCommits@b628c5a234cc32513014b7bfdd1e47b532124d98
+        with:
+          task_types: '["build","chore","ci","docs","feat","fix","hotfix","perf","refactor","revert","style","test"]'
+          add_label: "false"

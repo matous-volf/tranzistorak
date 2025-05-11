@@ -1,0 +1,45 @@
+---
+name: actionlint check
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  build:
+    name: actionlint check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: read
+      statuses: write
+    steps:
+      - name: actionlint installation
+        run: |
+          EXECUTABLE_DIRECTORY="$HOME/bin"
+          mkdir -p "$EXECUTABLE_DIRECTORY"
+          cd "$EXECUTABLE_DIRECTORY"
+          echo "$EXECUTABLE_DIRECTORY" >> "$GITHUB_PATH"
+
+          set -e
+
+          INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/rhysd/actionlint/e11169d0656294827d65370a3c76a2325406da85/scripts/download-actionlint.bash"
+          ACTIONLINT_VERSION="1.7.7"
+
+          INSTALL_SCRIPT_CHECKSUM="99ab9f1d97c31c9a051e6902305f7ea9f48e7e7e1b0ee41f64aa831c86655168  download-actionlint.bash"
+          ACTIONLINT_CHECKSUM="9f7dedb4e23f89f2922073d1a6720405b7b520d4f5832ebb96f0d55a2958886c  actionlint"
+
+          wget -O download-actionlint.bash "$INSTALL_SCRIPT_URL"
+          echo "$INSTALL_SCRIPT_CHECKSUM" | sha256sum --check
+
+          bash download-actionlint.bash "$ACTIONLINT_VERSION"
+          echo "$ACTIONLINT_CHECKSUM" | sha256sum --check
+      - name: code checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: actionlint check
+        run: actionlint

@@ -12,7 +12,9 @@ pub struct ActivityHandler {}
 
 impl ActivityHandler {
     pub async fn set_current_playing_track(track: PlayerTrack, context: Context) {
-        context.set_activity(Some(ActivityData::streaming(track.title(), track.url()).unwrap()));
+        context.set_activity(Some(
+            ActivityData::streaming(track.title(), track.url()).unwrap(),
+        ));
     }
 
     pub async fn update_activity(context: Context) {

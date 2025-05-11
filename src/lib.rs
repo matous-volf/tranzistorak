@@ -10,10 +10,10 @@ use songbird::SerenityInit;
 use activity::ActivityHandler;
 use commands::CommandHandler;
 
-mod player;
+mod activity;
 mod commands;
 mod embeds;
-mod activity;
+mod player;
 mod youtube;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -119,18 +119,19 @@ impl EventHandler for Handler {
 
             let mut command_handler = self.command_handler.lock().await;
             let response = command_handler.handle(&context, &command);
-            
+
             let embed = response.await;
 
-            _ = command.edit_response(&context.http, EditInteractionResponse::new()
-                .embed(embed)).await;
+            _ = command
+                .edit_response(&context.http, EditInteractionResponse::new().embed(embed))
+                .await;
         }
     }
 }
 
 pub async fn run(token: &str) {
     tracing_subscriber::fmt::init();
-    
+
     let mut client = Client::builder(token, DISCORD_INTENTS)
         .event_handler(Handler::new().await)
         .register_songbird()
