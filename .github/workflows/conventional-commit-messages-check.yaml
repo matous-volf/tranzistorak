@@ -1,0 +1,29 @@
+---
+name: conventional commit messages check
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  build:
+    name: conventional commit messages check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: read
+      statuses: write
+    steps:
+      - name: code checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: conventional commit messages check
+        uses: davidglezz/action-conventional-commits-check@ea8ae44ab9c7b79c1da0bd811a6ee6c5768ce476
+        with:
+          target-branch: ${{ github.event.pull_request.base.ref }}
+          current-branch: ${{ github.event.pull_request.head.ref }}
+          pattern: "^(build|chore|ci|docs|feat|fix|hotfix|perf|refactor|revert|style|test){1}(\\([[:alnum:]._-]+\\))?(!)?: ([[:alnum:]])+([[:space:][:print:]]*)$"

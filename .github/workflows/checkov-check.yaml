@@ -1,0 +1,33 @@
+---
+name: checkov check
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  build:
+    name: checkov check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: read
+      statuses: write
+    steps:
+      - name: Python installation
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b
+        with:
+          python-version: "3.13.1"
+      - name: Rust toolchain installation
+        uses: dtolnay/rust-toolchain@0579bb9e1907e560c2f263f705f93655a44a07e5
+      - name: code checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: checkov installation
+        run: pip install --no-cache-dir --require-hashes -r .github/dependencies/checkov-check/requirements.txt
+      - name: checkov check
+        run: checkov --directory .

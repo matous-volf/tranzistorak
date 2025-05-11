@@ -1,0 +1,42 @@
+---
+name: GitLeaks check
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  build:
+    name: GitLeaks check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: read
+      statuses: write
+    steps:
+      - name: GitLeaks installation
+        run: |
+          EXECUTABLE_DIRECTORY="$HOME/bin"
+          mkdir -p "$EXECUTABLE_DIRECTORY"
+          cd "$EXECUTABLE_DIRECTORY"
+          echo "$EXECUTABLE_DIRECTORY" >> "$GITHUB_PATH"
+
+          set -e
+
+          VERSION="v8.25.1"
+          CHECKSUM="3000d057342489827ee127310771873000b658f2987be7bbd21968ab7443913a  gitleaks.tar.gz"
+
+          wget -O "gitleaks.tar.gz" "https://github.com/gitleaks/gitleaks/releases/download/$VERSION/gitleaks_8.25.1_linux_x64.tar.gz"
+          echo "$CHECKSUM" | sha256sum --check
+
+          tar xzf gitleaks.tar.gz
+          chmod +x gitleaks
+      - name: code checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: GitLeaks check
+        run: gitleaks git && gitleaks dir

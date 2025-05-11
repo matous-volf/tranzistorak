@@ -1,0 +1,47 @@
+---
+name: hadolint check
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  build:
+    name: hadolint check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: read
+      statuses: write
+    steps:
+      - name: hadolint installation
+        run: |
+          EXECUTABLE_DIRECTORY="$HOME/bin"
+          mkdir -p "$EXECUTABLE_DIRECTORY"
+          cd "$EXECUTABLE_DIRECTORY"
+          echo "$EXECUTABLE_DIRECTORY" >> "$GITHUB_PATH"
+
+          set -e
+
+          VERSION="v2.12.0"
+          CHECKSUM="56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010 hadolint"
+
+          wget -O hadolint "https://github.com/hadolint/hadolint/releases/download/$VERSION/hadolint-Linux-x86_64"
+          echo "$CHECKSUM" | sha256sum --check
+
+          chmod +x hadolint
+      - name: code checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: hadolint check
+        run: |
+          STATUS=0
+          while read -r file; do
+            echo "Linting $file..."
+            hadolint "$file" || STATUS=1
+          done < <(find . -name "Dockerfile")
+          exit $STATUS
