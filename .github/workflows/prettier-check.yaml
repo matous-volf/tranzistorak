@@ -1,0 +1,27 @@
+---
+name: Prettier check
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  build:
+    name: Prettier check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: read
+      statuses: write
+    steps:
+      - name: code checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: dependencies installation
+        run: npm install
+      - name: Prettier check
+        run: npx prettier . --check
