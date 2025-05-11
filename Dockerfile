@@ -1,10 +1,8 @@
-# Using Bullseye because of the yt-dlp version.
-
-# bullseye
-FROM rust@sha256:b11e1edfad909f1df0b6e7c2df2ace12b5e76879a0da4c5f0b3fd6d239f59f75 AS builder
+# 1.86.0-bookworm
+FROM rust@sha256:300ec56abce8cc9448ddea2172747d048ed902a3090e6b57babb2bf19f754081 AS builder
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends cmake=3.18.4-2+deb11u1 \
+ && apt-get install -y --no-install-recommends cmake=3.25.1-1 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/tranzistorak
@@ -12,22 +10,25 @@ COPY . .
 
 RUN cargo install --path .
 
-# bullseye-slim
-FROM debian@sha256:33b7c2e071c29e618182ec872c471f39d2dde3d8904d95f5b7a61acf3a592e7b AS runner
+# bookworm-20250428-slim
+FROM debian@sha256:4b50eb66f977b4062683ff434ef18ac191da862dbe966961bc11990cf5791a8d AS runner
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libopus-dev=1.3.1-3 pipx=1.1.0-1 \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd -m -u 1000 botuser \
+ && mkdir -p /srv/bot/logs /srv/bot/rusty_pipe_storage \
+ && chown -R botuser:botuser /srv/bot
+
+COPY --from=builder /usr/local/cargo/bin/tranzistorak /srv/bot/tranzistorak
+
+USER botuser
 
 # hadolint ignore=DL3013
-RUN apt-get update \
- && apt-get install -y --no-install-recommends libopus-dev=1.3.1-0.1 python3-pip=20.3.4-4+deb11u1 \
- && python3 -m pip install --no-cache-dir -U yt-dlp \
- && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /usr/local/cargo/bin/tranzistorak /usr/local/bin/tranzistorak
-COPY ./.env /usr/local/bin/.env
-
-RUN useradd -m -u 1000 botuser
-USER botuser
+RUN pipx install yt-dlp
+ENV PATH="/home/botuser/.local/bin:${PATH}"
 
 #checkov:skip=CKV_DOCKER_2: No healthcheck.
 
-WORKDIR /usr/local/bin
-CMD ["tranzistorak"]
+WORKDIR /srv/bot
+CMD ["./tranzistorak"]
