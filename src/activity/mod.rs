@@ -1,41 +1,50 @@
 use std::time::Duration;
 
+use crate::model::Track;
 use serenity::client::Context;
 use serenity::gateway::ActivityData;
 use tokio::time::sleep;
 
-use crate::player::PlayerTrack;
-
 const IDLE_ACTIVITIES_INTERVAL_SECONDS: u64 = 5 * 60;
 
-pub struct ActivityHandler {}
+pub(crate) struct Manager {
+    context: Option<Context>,
+}
 
-impl ActivityHandler {
-    pub async fn set_current_playing_track(track: PlayerTrack, context: Context) {
-        context.set_activity(Some(
-            ActivityData::streaming(track.title(), track.url()).unwrap(),
-        ));
+impl Manager {
+    pub(crate) fn new() -> Self {
+        Self { context: None }
     }
 
-    pub async fn update_activity(context: Context) {
-        let mut idle_index = 0;
+    pub(crate) fn provide_context(&mut self, context: Context) {
+        self.context = Some(context);
+    }
 
-        let idle_activities = vec![
+    pub(crate) async fn set_current_playing_track(&self, track: Track) -> serenity::Result<()> {
+        if let Some(context) = self.context.as_ref() {
+            context.set_activity(Some(ActivityData::streaming(
+                track.title,
+                track.youtube_url,
+            )?));
+        }
+
+        Ok(())
+    }
+
+    pub(crate) async fn update_idle_activity(&self) {
+        let idle_activities = [
             ActivityData::watching(format!("verze {}", crate::VERSION)),
             ActivityData::listening("/hrat"),
             ActivityData::playing("YouTube a Spotify"),
             ActivityData::playing("videa i playlisty"),
-            ActivityData::playing("svobodný a otevřený software!"),
-            ActivityData::playing("github.com/matous-volf/tranzistorak"),
+            ActivityData::watching("svobodný a otevřený software!"),
+            ActivityData::watching("github.com/matous-volf/tranzistorak"),
         ];
 
-        loop {
-            context.set_activity(Some(idle_activities[idle_index].clone()));
-            idle_index += 1;
-            if idle_index >= idle_activities.len() {
-                idle_index = 0;
+        for activity in idle_activities.iter().cycle() {
+            if let Some(context) = self.context.as_ref() {
+                context.set_activity(Some(activity.clone()));
             }
-
             sleep(Duration::from_secs(IDLE_ACTIVITIES_INTERVAL_SECONDS)).await;
         }
     }

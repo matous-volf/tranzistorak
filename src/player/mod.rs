@@ -1,188 +1,197 @@
-use std::sync::Arc;
-
+pub(crate) use crate::model::Track;
+use amplify_derive::Display;
+use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::SeedableRng;
+use serenity::all::{ChannelId, Context, GuildId};
 use serenity::async_trait;
-use serenity::client::Context;
-use serenity::model::id::{ChannelId, GuildId};
 use songbird::error::JoinError;
-use songbird::events::EventHandler as VoiceEventHandler;
 use songbird::input::YoutubeDl;
 use songbird::tracks::TrackHandle;
-use songbird::CoreEvent::DriverDisconnect;
-use songbird::Event::{Core, Track};
-use songbird::TrackEvent::End;
-use songbird::{Call, Event, EventContext};
+use songbird::{Call, CoreEvent, Event, EventContext, EventHandler, TrackEvent};
+use std::pin::Pin;
+use std::sync::Arc;
+use thiserror::Error;
 use tokio::sync::Mutex;
+use tokio::time::Duration;
+use unwrap_or_log::LogError;
 
-use crate::commands::CommandHandler;
-use crate::youtube;
-use crate::youtube::SearchResult;
+const DISCONNECT_STOP_TIMEOUT_DURATION: Duration = Duration::from_secs(1);
 
-const DISCONNECT_STOP_TIMEOUT_MS: u64 = 1000;
+// TODO: Make the callback accept references instead.
+type OnStartedPlayingCallbackFn =
+    dyn Fn(Track, ChannelId, Context) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync;
 
-pub struct PlayerTrack {
-    title: String,
-    url: String,
-    thumbnail_url: String,
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+pub(crate) enum CreationError {
+    SongbirdClientRetrieval,
+    ChannelJoin(JoinError),
 }
 
-impl PlayerTrack {
-    pub fn new(title: String, url: String, thumbnail_url: String) -> PlayerTrack {
-        PlayerTrack {
-            title,
-            url,
-            thumbnail_url,
-        }
-    }
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+pub(crate) struct NextNoTrackError;
 
-    pub fn title(&self) -> &str {
-        &self.title
-    }
-    pub fn url(&self) -> &str {
-        &self.url
-    }
-    pub fn thumbnail_url(&self) -> &str {
-        &self.thumbnail_url
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+pub(crate) struct PreviousNoTrackError;
+
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+struct OnTrackEndedNotPlayingError;
+
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+pub(crate) struct QueueMoveIndexExceedsQueueLengthError(pub(crate) usize);
+
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+pub(crate) struct NoVoiceChannelIdError;
+
+impl From<JoinError> for CreationError {
+    fn from(join_error: JoinError) -> Self {
+        Self::ChannelJoin(join_error)
     }
 }
 
-impl Clone for PlayerTrack {
-    fn clone(&self) -> Self {
-        Self {
-            title: self.title().to_string(),
-            url: self.url().to_string(),
-            thumbnail_url: self.thumbnail_url().to_string(),
-        }
-    }
+#[derive(Default, Clone)]
+pub(crate) struct Queue {
+    pub(crate) tracks: Vec<Track>,
+    pub(crate) current_playing_track_index: Option<usize>,
 }
 
-pub struct Player {
-    driver: Arc<Mutex<Call>>,
-    audio: Option<TrackHandle>,
+pub(crate) struct Player {
+    http_client: reqwest::Client,
+    voice_driver: Arc<Mutex<Call>>,
+    track_handle: Option<TrackHandle>,
     text_channel_id: ChannelId,
     context: Context,
-    queue: Vec<PlayerTrack>,
-    current_playing_index: Option<usize>,
+    queue: Queue,
     repeating: bool,
     repeating_queue: bool,
-    stopped: bool,
+    is_stopped: bool,
+    on_started_playing_callback: Box<OnStartedPlayingCallbackFn>,
     rng: StdRng,
 }
 
 impl Player {
-    pub async fn new(
+    pub(crate) async fn new(
+        http_client: reqwest::Client,
         guild_id: GuildId,
         voice_channel_id: ChannelId,
         text_channel_id: ChannelId,
         context: Context,
-    ) -> Result<Arc<Mutex<Player>>, JoinError> {
-        let manager = songbird::get(&context).await.unwrap().clone();
+        on_started_playing_callback: impl (Fn(
+            Track,
+            ChannelId,
+            Context,
+        ) -> Pin<Box<dyn Future<Output = ()> + Send>>)
+        + Send
+        + Sync
+        + 'static,
+    ) -> Result<Arc<Mutex<Player>>, CreationError> {
+        let manager = songbird::get(&context)
+            .await
+            .ok_or(CreationError::SongbirdClientRetrieval)?
+            .clone();
 
-        let driver = manager.join(guild_id, voice_channel_id).await?;
+        let voice_driver = manager.join(guild_id, voice_channel_id).await?;
+        voice_driver.lock().await.deafen(true).await?;
 
-        driver.lock().await.deafen(true).await?;
-
-        let player = Player {
-            driver,
-            audio: None,
+        let player = Arc::new(Mutex::new(Self {
+            http_client,
+            voice_driver,
+            track_handle: None,
             text_channel_id,
             context,
-            queue: Vec::new(),
-            current_playing_index: None,
+            queue: Queue::default(),
             repeating: false,
             repeating_queue: false,
-            stopped: false,
+            is_stopped: false,
+            on_started_playing_callback: Box::new(on_started_playing_callback),
             rng: StdRng::from_os_rng(),
-        };
-
-        let player = Arc::new(Mutex::new(player));
+        }));
 
         let player_clone = player.clone();
         let player_clone = player_clone.lock().await;
-        let mut driver = player_clone.driver.lock().await;
+        let mut voice_driver = player_clone.voice_driver.lock().await;
 
-        driver.add_global_event(Track(End), TrackEndHandler::new(player.clone()));
-        driver.add_global_event(
-            Core(DriverDisconnect),
+        voice_driver.add_global_event(
+            Event::Track(TrackEvent::End),
+            TrackEndHandler::new(player.clone()),
+        );
+        voice_driver.add_global_event(
+            Event::Core(CoreEvent::DriverDisconnect),
             DriverDisconnectHandler::new(player.clone()),
         );
 
         Ok(player)
     }
 
-    pub async fn enqueue(&mut self, query: &str) -> Option<SearchResult> {
-        let search_result = youtube::get_tracks_from_query(query).await?;
+    pub(crate) async fn enqueue(&mut self, track: Track) {
+        self.queue.tracks.push(track.clone());
 
-        for track in search_result.tracks() {
-            self.queue.push(track.clone());
+        if self.queue.current_playing_track_index.is_none() {
+            self.play(self.queue.tracks.len() - 1).await;
         }
-
-        if self.current_playing_index.is_none() {
-            let next_playing_index = self.queue.len() - search_result.tracks().len();
-            self.play(next_playing_index).await;
-        }
-
-        Some(search_result)
     }
 
-    async fn play(&mut self, index: usize) {
-        let mut driver = self.driver.lock().await;
+    async fn play(&mut self, track_index: usize) {
+        let mut driver = self.voice_driver.lock().await;
         driver.stop();
 
-        self.current_playing_index = Some(index);
-        let track = &self.queue[index];
+        self.queue.current_playing_track_index = Some(track_index);
+        let track = &self.queue.tracks[track_index];
 
-        let youtube_dl = YoutubeDl::new(reqwest::Client::new(), track.url.clone());
+        let youtube_dl = YoutubeDl::new(self.http_client.clone(), track.youtube_url.clone());
+        self.track_handle = Some(driver.play_only_input(youtube_dl.into()));
 
-        let audio_handle = driver.play_only_input(youtube_dl.into());
-        self.audio = Some(audio_handle);
-
-        CommandHandler::track_started_playing(self, track, self.context.clone()).await;
+        (self.on_started_playing_callback)(
+            track.clone(),
+            self.text_channel_id,
+            self.context.clone(),
+        )
+        .await;
     }
 
-    pub async fn next(&mut self) -> Result<(), ()> {
-        let current_playing_index = match self.current_playing_index {
-            None => return Err(()),
+    pub(crate) async fn next(&mut self) -> Result<(), NextNoTrackError> {
+        let current_playing_track_index = match self.queue.current_playing_track_index {
+            None => Err(NextNoTrackError)?,
             Some(index) => {
-                if index + 1 >= self.queue.len() {
-                    return Err(());
+                if index + 1 >= self.queue.tracks.len() {
+                    Err(NextNoTrackError)?;
                 }
                 index
             }
         };
 
-        self.play(current_playing_index + 1).await;
+        self.play(current_playing_track_index + 1).await;
         Ok(())
     }
 
-    pub async fn previous(&mut self) -> Result<(), ()> {
-        let current_playing_index = match self.current_playing_index {
-            None => {
-                self.play(self.queue.len() - 1).await;
-                return Ok(());
-            }
-            Some(index) => {
-                if index < 1 {
-                    return Err(());
-                }
+    pub(crate) async fn previous(&mut self) -> Result<(), PreviousNoTrackError> {
+        let track_index = match self.queue.current_playing_track_index {
+            None => self.queue.tracks.len(),
+            Some(index) => index,
+        }
+        .checked_sub(1)
+        .ok_or(PreviousNoTrackError)?;
 
-                index
-            }
-        };
-
-        self.play(current_playing_index - 1).await;
+        self.play(track_index).await;
         Ok(())
     }
 
-    pub async fn queue(&self) -> &Vec<PlayerTrack> {
+    pub(crate) fn queue(&self) -> &Queue {
         &self.queue
     }
 
-    pub async fn queue_move(&mut self, index: usize) -> Result<(), ()> {
-        if index >= self.queue.len() {
-            return Err(());
+    pub(crate) async fn queue_move(
+        &mut self,
+        index: usize,
+    ) -> Result<(), QueueMoveIndexExceedsQueueLengthError> {
+        if index >= self.queue.tracks.len() {
+            Err(QueueMoveIndexExceedsQueueLengthError(index))?;
         }
 
         self.play(index).await;
@@ -190,95 +199,96 @@ impl Player {
         Ok(())
     }
 
-    pub async fn queue_repeat(&mut self, repeat: bool) {
+    pub(crate) async fn queue_repeat(&mut self, repeat: bool) {
         self.repeating_queue = repeat;
     }
 
-    pub async fn queue_shuffle(&mut self) {
-        self.queue.shuffle(&mut self.rng);
+    pub(crate) async fn queue_shuffle(&mut self) {
+        self.queue.tracks.shuffle(&mut self.rng);
         self.play(0).await;
     }
 
-    pub async fn pause(&self) {
-        let audio = self.audio.as_ref().unwrap();
-        if audio.get_info().await.is_err() {
-            return;
+    pub(crate) async fn pause(&self) -> songbird::error::TrackResult<()> {
+        if let Some(track_handle) = &self.track_handle {
+            return track_handle.pause();
         }
-        audio.pause().unwrap();
+        Ok(())
     }
 
-    pub async fn resume(&self) {
-        let audio = self.audio.as_ref().unwrap();
-        if audio.get_info().await.is_err() {
-            return;
+    pub(crate) async fn resume(&self) -> songbird::error::TrackResult<()> {
+        if let Some(track_handle) = &self.track_handle {
+            return track_handle.play();
         }
-        audio.play().unwrap();
+        Ok(())
     }
 
-    pub async fn repeat(&mut self, repeat: bool) {
+    pub(crate) async fn repeat(&mut self, repeat: bool) {
         self.repeating = repeat;
     }
 
-    pub async fn stop(&mut self) {
-        let mut driver = self.driver.lock().await;
+    pub(crate) async fn stop(&mut self) {
+        self.is_stopped = true;
 
-        self.stopped = true;
-
-        driver.stop();
-        let _ = driver.leave().await;
-        driver.remove_all_global_events();
+        let mut voice_driver = self.voice_driver.lock().await;
+        voice_driver.stop();
+        _ = voice_driver.leave().await;
+        voice_driver.remove_all_global_events();
     }
 
-    async fn track_ended(&mut self) {
+    async fn on_track_ended(&mut self) -> Result<(), OnTrackEndedNotPlayingError> {
         if self.repeating {
-            self.play(self.current_playing_index.unwrap()).await;
-            return;
+            self.play(
+                self.queue
+                    .current_playing_track_index
+                    .ok_or(OnTrackEndedNotPlayingError)?,
+            )
+            .await;
+            return Ok(());
         }
 
-        if self.next().await.is_err() {
+        if let Err(NextNoTrackError) = self.next().await {
             if self.repeating_queue {
                 self.play(0).await;
             } else {
-                self.current_playing_index = None;
+                self.queue.current_playing_track_index = None;
             }
-        };
+        }
+
+        Ok(())
     }
 
-    async fn disconnected(&mut self) {
-        tokio::time::sleep(tokio::time::Duration::from_millis(
-            DISCONNECT_STOP_TIMEOUT_MS,
-        ))
-        .await;
+    async fn on_disconnected(&mut self) {
+        tokio::time::sleep(DISCONNECT_STOP_TIMEOUT_DURATION).await;
 
-        if self.driver.lock().await.current_connection().is_none() {
+        if self
+            .voice_driver
+            .lock()
+            .await
+            .current_connection()
+            .is_none()
+        {
             self.stop().await;
         }
     }
 
-    pub async fn is_stopped(&self) -> bool {
-        self.stopped
-    }
-
-    pub fn current_playing_index(&self) -> Option<usize> {
-        self.current_playing_index
-    }
-
-    pub async fn voice_channel_id(&self) -> songbird::id::ChannelId {
-        self.driver
+    pub(crate) async fn voice_channel_id(
+        &self,
+    ) -> Result<songbird::id::ChannelId, NoVoiceChannelIdError> {
+        self.voice_driver
             .lock()
             .await
             .current_connection()
-            .unwrap()
+            .ok_or(NoVoiceChannelIdError)?
             .channel_id
-            .unwrap()
+            .ok_or(NoVoiceChannelIdError)
     }
 
-    pub fn text_channel_id(&self) -> ChannelId {
-        self.text_channel_id
-    }
-
-    pub fn set_text_channel_id(&mut self, channel_id: ChannelId) {
+    pub(crate) fn set_text_channel_id(&mut self, channel_id: ChannelId) {
         self.text_channel_id = channel_id
+    }
+
+    pub(crate) fn is_stopped(&self) -> bool {
+        self.is_stopped
     }
 }
 
@@ -287,15 +297,18 @@ struct TrackEndHandler {
 }
 
 impl TrackEndHandler {
-    fn new(player: Arc<Mutex<Player>>) -> TrackEndHandler {
-        TrackEndHandler { player }
+    fn new(player: Arc<Mutex<Player>>) -> Self {
+        Self { player }
     }
 }
 
 #[async_trait]
-impl VoiceEventHandler for TrackEndHandler {
+impl EventHandler for TrackEndHandler {
     async fn act(&self, _: &EventContext<'_>) -> Option<Event> {
-        self.player.lock().await.track_ended().await;
+        let mut player = self.player.lock().await;
+        if player.on_track_ended().await.log_error().is_err() {
+            player.stop().await;
+        };
         None
     }
 }
@@ -305,15 +318,15 @@ struct DriverDisconnectHandler {
 }
 
 impl DriverDisconnectHandler {
-    fn new(player: Arc<Mutex<Player>>) -> DriverDisconnectHandler {
-        DriverDisconnectHandler { player }
+    fn new(player: Arc<Mutex<Player>>) -> Self {
+        Self { player }
     }
 }
 
 #[async_trait]
-impl VoiceEventHandler for DriverDisconnectHandler {
+impl EventHandler for DriverDisconnectHandler {
     async fn act(&self, _: &EventContext<'_>) -> Option<Event> {
-        self.player.lock().await.disconnected().await;
+        self.player.lock().await.on_disconnected().await;
         None
     }
 }

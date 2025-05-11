@@ -1,2 +1,6 @@
+/.dockerignore
+/Dockerfile
+/docker-compose.yaml
+
 /target
-Dockerfile
+/node_modules
