@@ -23,7 +23,7 @@ pub(crate) fn initialize_logger() -> Result<(), FtailError> {
                 .unwrap(),
         )
         .console(LevelFilter::Warn)
-        .daily_file(DAILY_FILE_DIRECTORY_PATH, LevelFilter::Warn)
+        .daily_file(daily_file_path, LevelFilter::Warn)
         .retention_days(DAILY_RETENTION_DAYS_COUNT);
 
     ftail.init()

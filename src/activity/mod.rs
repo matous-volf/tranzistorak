@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::model::Track;
@@ -8,25 +9,28 @@ use tokio::time::sleep;
 const IDLE_ACTIVITIES_INTERVAL_SECONDS: u64 = 5 * 60;
 
 pub(crate) struct Manager {
-    context: Option<Context>,
+    context: Context,
 }
 
 impl Manager {
-    pub(crate) fn new() -> Self {
-        Self { context: None }
-    }
+    pub(crate) fn new(context: Context) -> Arc<Self> {
+        let new = Arc::new(Self { context });
 
-    pub(crate) fn provide_context(&mut self, context: Context) {
-        self.context = Some(context);
+        {
+            let new = new.clone();
+            tokio::spawn(async move {
+                new.update_idle_activity().await;
+            });
+        }
+
+        new
     }
 
     pub(crate) async fn set_current_playing_track(&self, track: Track) -> serenity::Result<()> {
-        if let Some(context) = self.context.as_ref() {
-            context.set_activity(Some(ActivityData::streaming(
-                track.title,
-                track.youtube_url,
-            )?));
-        }
+        self.context.set_activity(Some(ActivityData::streaming(
+            track.title,
+            track.youtube_url,
+        )?));
 
         Ok(())
     }
@@ -42,9 +46,7 @@ impl Manager {
         ];
 
         for activity in idle_activities.iter().cycle() {
-            if let Some(context) = self.context.as_ref() {
-                context.set_activity(Some(activity.clone()));
-            }
+            self.context.set_activity(Some(activity.clone()));
             sleep(Duration::from_secs(IDLE_ACTIVITIES_INTERVAL_SECONDS)).await;
         }
     }

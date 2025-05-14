@@ -1,9 +1,9 @@
-use crate::bot::Bot;
-use crate::env::{DISCORD_API_TOKEN, SPOTIFY_API_CLIENT_ID, SPOTIFY_API_CLIENT_SECRET};
+use crate::env::DISCORD_API_TOKEN;
 use crate::log::initialize_logger;
 use serenity::Client;
 use serenity::all::GatewayIntents;
-use songbird::SerenityInit;
+use songbird::driver::DecodeMode;
+use songbird::{Config, SerenityInit};
 use unwrap_or_log::LogError;
 
 mod activity;
@@ -24,14 +24,16 @@ const DISCORD_INTENTS: GatewayIntents = GatewayIntents::non_privileged();
 pub async fn run() {
     initialize_logger().unwrap_or_else(|error| panic!("on initializing the logger: {}", error));
 
-    let spotify_credentials =
-        rspotify::Credentials::new(SPOTIFY_API_CLIENT_ID, SPOTIFY_API_CLIENT_SECRET);
-
-    let bot = Bot::new(spotify_credentials).await.log_error().unwrap();
+    let handler = bot::Handler::new();
 
     Client::builder(DISCORD_API_TOKEN, DISCORD_INTENTS)
-        .event_handler(bot)
-        .register_songbird()
+        .event_handler(handler)
+        .register_songbird_from_config(
+            Config::default()
+                .decode_mode(DecodeMode::Decode)
+                .decode_channels(songbird::driver::Channels::Mono)
+                .decode_sample_rate(command::voice::SAMPLE_RATE),
+        )
         .await
         .log_error()
         .unwrap()
