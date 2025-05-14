@@ -1,12 +1,12 @@
 [package]
 name = "tranzistorak"
-version = "3.3.0"
+version = "3.4.0"
 edition = "2024"
 
 [dependencies]
 amplify_derive = "4.0.1"
 anyhow = "1.0.98"
-ftail = { version = "0.2.1", features = ["timezone"] }
+ftail = { version = "0.3.0", features = ["timezone"] }
 iana-time-zone = "0.1.63"
 load-dotenv = "0.1.2"
 log = "0.4.27"
@@ -14,9 +14,16 @@ rand = "0.9.1"
 reqwest = "0.12.15"
 rspotify = { version = "0.14.0" }
 rustypipe = "0.11.4"
-serenity = "0.12.4"
-songbird = "0.5.0"
+serenity = { version = "0.12.4", features = ["model", "cache"] }
+songbird = { version = "0.5.0", default-features = true, features = ["receive"] }
 symphonia = { version = "0.5.4", features = ["all"] }
 thiserror = "2.0.12"
-tokio = { version = "1.44.2", features = ["rt-multi-thread"] }
+tokio = { version = "1.45.0", features = ["rt-multi-thread"] }
 unwrap_or_log = "0.2.0"
+hound = "3.5.1"
+ct2rs = { git = "https://github.com/matous-volf/ctranslate2-rs", features = ["whisper"] }
+futures = "0.3.31"
+circular-queue = "0.2.7"
+cpal = "0.15.3"
+hf-hub = "0.4.2"
+deunicode = "1.6.2"

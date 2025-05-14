@@ -1,0 +1,2 @@
+[env]
+RUSTONIG_SYSTEM_LIBONIG = {value =  "1", force = true}

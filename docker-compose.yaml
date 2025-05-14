@@ -3,8 +3,9 @@ services:
     container_name: tranzistorak
     build: .
     volumes:
-      - ./logs:/usr/local/bin/tranzistorak/logs
-      - ./rusty_pipe_storage:/usr/local/bin/tranzistorak/rusty_pipe_storage
+      - ./logs:/srv/bot/logs
+      - ./rusty_pipe_storage:/srv/bot/rusty_pipe_storage
+      - ./transcription_model:/srv/bot/transcription_model
     networks:
       - default
     restart: always

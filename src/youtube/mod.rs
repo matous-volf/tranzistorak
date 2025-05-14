@@ -1,5 +1,5 @@
 use crate::model::Track;
-use songbird::input::{AuxMetadata, YoutubeDl};
+use songbird::input::{AudioStreamError, AuxMetadata, YoutubeDl};
 
 const MAX_RESULTS: usize = 5;
 
@@ -19,8 +19,20 @@ impl Searcher {
         YoutubeDl::new_search(self.http_client.clone(), query.as_ref())
             .search(Some(MAX_RESULTS))
             .await
-            .map_err(Into::into)
-            .map(|results| results.map(Track::try_from).find_map(Result::ok))
+            .map(Some)
+            .or_else(|error| match error {
+                AudioStreamError::Fail(error) => {
+                    if error.to_string().contains("no results found") {
+                        Ok(None)
+                    } else {
+                        Err(anyhow::Error::from_boxed(error))
+                    }
+                }
+                error => Err(error.into()),
+            })
+            .map(|results| {
+                results.and_then(|results| results.map(Track::try_from).find_map(Result::ok))
+            })
     }
 }
 
