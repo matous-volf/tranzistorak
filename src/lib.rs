@@ -3,7 +3,8 @@ use crate::env::{DISCORD_API_TOKEN, SPOTIFY_API_CLIENT_ID, SPOTIFY_API_CLIENT_SE
 use crate::log::initialize_logger;
 use serenity::Client;
 use serenity::all::GatewayIntents;
-use songbird::SerenityInit;
+use songbird::driver::{DecodeMode, SampleRate};
+use songbird::{Config, SerenityInit};
 use unwrap_or_log::LogError;
 
 mod activity;
@@ -31,7 +32,12 @@ pub async fn run() {
 
     Client::builder(DISCORD_API_TOKEN, DISCORD_INTENTS)
         .event_handler(bot)
-        .register_songbird()
+        .register_songbird_from_config(
+            Config::default()
+                .decode_mode(DecodeMode::Decode)
+                .decode_channels(songbird::driver::Channels::Mono)
+                .decode_sample_rate(command::voice::SAMPLE_RATE),
+        )
         .await
         .log_error()
         .unwrap()

@@ -1,7 +1,7 @@
 use crate::embed::EmbedIcon;
 use crate::player::{Player, Track};
 use crate::query::Fetcher;
-use crate::{activity, embed, player, query, youtube};
+use crate::{activity, command, embed, player, query, youtube};
 use amplify_derive::Display;
 use log::error;
 use rspotify::ClientCredsSpotify;
@@ -11,6 +11,7 @@ use serenity::all::{
 use songbird::error::JoinError;
 use std::collections::HashMap;
 use std::sync::Arc;
+use songbird::EventHandler;
 use thiserror::Error;
 use tokio::sync::{Mutex, RwLock};
 use unwrap_or_log::LogError;
@@ -81,12 +82,14 @@ pub(crate) struct Executor {
     spotify_client: Arc<ClientCredsSpotify>,
     query_fetchers: [Box<dyn Fetcher + Send + Sync>; 4],
     players: Mutex<HashMap<GuildId, Arc<Mutex<Player>>>>,
+    voice_command_handler: command::voice::Handler,
     activity_manager: Arc<RwLock<activity::Manager>>,
 }
 
 impl Executor {
     pub(crate) async fn new(
         spotify_api_credentials: rspotify::Credentials,
+        voice_command_handler: command::voice::Handler,
         activity_manager: Arc<RwLock<activity::Manager>>,
     ) -> Result<Self, ExecutorCreationError> {
         let http_client = reqwest::Client::new();
@@ -118,6 +121,7 @@ impl Executor {
             ],
             players: Mutex::new(HashMap::new()),
             activity_manager,
+            voice_command_handler
         })
     }
 
@@ -332,6 +336,7 @@ impl Executor {
                     context,
                 ))
             },
+            self.voice_command_handler.clone()
         )
         .await?;
         self.players

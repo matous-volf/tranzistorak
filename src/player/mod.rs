@@ -90,6 +90,7 @@ impl Player {
         + Send
         + Sync
         + 'static,
+        voice_tick_event_handler: impl EventHandler + 'static,
     ) -> Result<Arc<Mutex<Player>>, CreationError> {
         let manager = songbird::get(&context)
             .await
@@ -118,13 +119,14 @@ impl Player {
         let mut voice_driver = player_clone.voice_driver.lock().await;
 
         voice_driver.add_global_event(
-            Event::Track(TrackEvent::End),
+            TrackEvent::End.into(),
             TrackEndHandler::new(player.clone()),
         );
         voice_driver.add_global_event(
-            Event::Core(CoreEvent::DriverDisconnect),
+            CoreEvent::DriverDisconnect.into(),
             DriverDisconnectHandler::new(player.clone()),
         );
+        voice_driver.add_global_event(CoreEvent::VoiceTick.into(), voice_tick_event_handler);
 
         Ok(player)
     }

@@ -4,25 +4,41 @@ use log::info;
 use serenity::all::{Context, EditInteractionResponse, EventHandler, Interaction, Ready};
 use serenity::async_trait;
 use std::sync::Arc;
+use amplify_derive::Display;
+use thiserror::Error;
 use tokio::sync::RwLock;
 use unwrap_or_log::LogError;
 
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+pub(crate) enum CreationError {
+    Executor(command::ExecutorCreationError),
+    VoiceCommandHandler(anyhow::Error),
+}
+
 pub(crate) struct Bot {
     command_executor: command::Executor,
+    voice_command_handler: command::voice::Handler,
     activity_manager: Arc<RwLock<activity::Manager>>,
 }
 
 impl Bot {
     pub(crate) async fn new(
         spotify_api_credentials: rspotify::Credentials,
-    ) -> Result<Self, command::ExecutorCreationError> {
+    ) -> Result<Self, CreationError> {
         let activity_manager = Arc::new(RwLock::new(activity::Manager::new()));
+        let voice_command_handler = command::voice::Handler::new()
+            .await
+            .map_err(CreationError::VoiceCommandHandler)?;
         Ok(Self {
             command_executor: command::Executor::new(
                 spotify_api_credentials,
+                voice_command_handler.clone(),
                 activity_manager.clone(),
             )
-            .await?,
+            .await
+            .map_err(CreationError::Executor)?,
+            voice_command_handler,
             activity_manager,
         })
     }
