@@ -1,14 +1,11 @@
-use crate::{command, embed, player};
+use crate::command::{FromInteractionInternalError, FromInteractionUserCausedError};
+use crate::{command, player};
 use serenity::builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter};
 use serenity::model::Color;
 
 const ICONS_BASE_URL: &str =
     "https://raw.githubusercontent.com/matous-volf/tranzistorak/main/icons/";
 const QUEUE_VIEW_MAX_TRACKS: usize = 15;
-
-pub(crate) fn error(author_text: impl Into<String>, title: impl Into<String>) -> CreateEmbed {
-    base(author_text, EmbedIcon::Error, title).color(Color::RED)
-}
 
 pub(crate) fn base(
     author_text: impl Into<String>,
@@ -22,6 +19,14 @@ pub(crate) fn base(
         )
         .author(CreateEmbedAuthor::new(author_text).icon_url(author_icon.url()))
         .title(title)
+}
+
+pub(crate) fn error(author_text: impl Into<String>, title: impl Into<String>) -> CreateEmbed {
+    base(author_text, EmbedIcon::Error, title).color(Color::RED)
+}
+
+pub(crate) fn command_generic_error() -> CreateEmbed {
+    error("Chyba", "Při vykonávání příkazu nastala chyba.")
 }
 
 pub(crate) enum EmbedIcon {
@@ -56,39 +61,51 @@ impl EmbedIcon {
     }
 }
 
-impl From<command::ExecutionError> for CreateEmbed {
-    fn from(_: command::ExecutionError) -> Self {
-        error("Chyba", "Při vykonávání příkazu nastala chyba.")
-    }
-}
-
-impl From<command::Error> for CreateEmbed {
-    fn from(error: command::Error) -> Self {
-        embed::error(
+impl From<FromInteractionUserCausedError> for CreateEmbed {
+    fn from(from_interaction_user_caused_error: FromInteractionUserCausedError) -> Self {
+        error(
             "Chyba",
-            match error {
-                command::Error::NotInGuild => {
+            match from_interaction_user_caused_error {
+                FromInteractionUserCausedError::NotInGuild => {
                     "Příkazy je možné použít pouze na serveru, v přímé konverzaci nikoli."
                         .to_owned()
                 }
-                command::Error::UserNotInVoiceChannel => {
+                FromInteractionUserCausedError::UserNotInVoiceChannel => {
                     "Pro ovládání je nutné se připojit do hlasového kanálu.".to_owned()
                 }
-                command::Error::UserInDifferentVoiceChannel => {
+            },
+        )
+    }
+}
+
+impl From<FromInteractionInternalError> for CreateEmbed {
+    fn from(_: FromInteractionInternalError) -> Self {
+        command_generic_error()
+    }
+}
+
+impl From<command::UserCausedError> for CreateEmbed {
+    fn from(user_caused_error: command::UserCausedError) -> Self {
+        error(
+            "Chyba",
+            match user_caused_error {
+                command::UserCausedError::UserInDifferentVoiceChannel => {
                     "Pro ovládání je nutné se připojit do hlasového kanálu, v němž se nachází bot."
                         .to_owned()
                 }
-                command::Error::CouldNotJoin(_) => {
+                command::UserCausedError::CouldNotJoin(_) => {
                     "Nebylo možné připojit se do hlasového kanálu.".to_owned()
                 }
-                command::Error::NotPlaying => "Neprobíhá přehrávání.".to_owned(),
-                command::Error::QueueMove(player::QueueMoveIndexExceedsQueueLengthError(index)) => {
+                command::UserCausedError::NotPlaying => "Neprobíhá přehrávání.".to_owned(),
+                command::UserCausedError::QueueMove(
+                    player::QueueMoveIndexExceedsQueueLengthError(index),
+                ) => {
                     format!("Fronta {}. pozici neobsahuje.", index + 1)
                 }
-                command::Error::Next(player::NextNoTrackError) => {
+                command::UserCausedError::Next(player::NextNoTrackError) => {
                     "Ve frontě se nenachází žádné další položky.".to_owned()
                 }
-                command::Error::Previous(player::PreviousNoTrackError) => {
+                command::UserCausedError::Previous(player::PreviousNoTrackError) => {
                     "Ve frontě se nenachází žádné předchozí položky.".to_owned()
                 }
             },
@@ -96,9 +113,15 @@ impl From<command::Error> for CreateEmbed {
     }
 }
 
+impl From<command::InternalError> for CreateEmbed {
+    fn from(_: command::InternalError) -> Self {
+        command_generic_error()
+    }
+}
+
 impl From<command::Executed<'_>> for CreateEmbed {
-    fn from(executed: command::Executed) -> Self {
-        match executed {
+    fn from(executed_command: command::Executed) -> Self {
+        match executed_command {
             command::Executed::Play(None) => error(
                 "Nenalezeno",
                 "Dle zadaného textu nebyl nalezen žádný výsledek.",
@@ -156,7 +179,7 @@ impl From<command::Executed<'_>> for CreateEmbed {
 
                 base("Fronta", EmbedIcon::Queue, "Položky ve frontě:").description(queue_text)
             }
-            command::Executed::QueueMove(index) => base(
+            command::Executed::QueueMove { index } => base(
                 "Fronta",
                 EmbedIcon::Queue,
                 format!("Přehrávání posunuto na {}. pozici ve frontě.", index + 1),

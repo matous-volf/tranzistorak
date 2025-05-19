@@ -1,18 +1,19 @@
+use crate::command::{Action, Command};
 use crate::embed::EmbedIcon;
+use crate::env::{SPOTIFY_API_CLIENT_ID, SPOTIFY_API_CLIENT_SECRET};
 use crate::player::{Player, Track};
 use crate::query::Fetcher;
 use crate::{activity, embed, player, query, youtube};
 use amplify_derive::Display;
 use log::error;
 use rspotify::ClientCredsSpotify;
-use serenity::all::{
-    ChannelId, CommandDataOptionValue, CommandInteraction, Context, CreateMessage, GuildId,
-};
+use serenity::all::{ChannelId, Context, CreateMessage, GuildId};
+use serenity::async_trait;
 use songbird::error::JoinError;
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::Mutex;
 use unwrap_or_log::LogError;
 
 #[derive(Error, Display, Debug)]
@@ -23,13 +24,28 @@ pub(crate) enum ExecutorCreationError {
     YouTubePlaylistFetcherCreation(rustypipe::error::Error),
 }
 
-/// Error caused by the user invoking a command.
 #[derive(Error, Display, Debug)]
 #[display(Debug)]
-#[allow(dead_code)]
 pub(crate) enum Error {
-    NotInGuild,
-    UserNotInVoiceChannel,
+    UserCaused(UserCausedError),
+    Internal(InternalError),
+}
+
+impl From<UserCausedError> for Error {
+    fn from(user_caused_error: UserCausedError) -> Self {
+        Self::UserCaused(user_caused_error)
+    }
+}
+
+impl From<InternalError> for Error {
+    fn from(internal_error: InternalError) -> Self {
+        Self::Internal(internal_error)
+    }
+}
+
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+pub(crate) enum UserCausedError {
     UserInDifferentVoiceChannel,
     CouldNotJoin(JoinError),
     NotPlaying,
@@ -38,10 +54,20 @@ pub(crate) enum Error {
     Previous(player::PreviousNoTrackError),
 }
 
+#[derive(Error, Display, Debug)]
+#[display(Debug)]
+#[allow(dead_code)]
+pub(crate) enum InternalError {
+    PlayerCreation(player::CreationError),
+    Play(anyhow::Error),
+    Pause(songbird::error::ControlError),
+    Resume(songbird::error::ControlError),
+}
+
 pub(crate) enum Executed<'a> {
     Play(Option<query::Fetched<'a>>),
     QueueView(player::Queue),
-    QueueMove(usize),
+    QueueMove { index: usize },
     QueueRepeat(bool),
     QueueShuffle,
     Next,
@@ -52,26 +78,15 @@ pub(crate) enum Executed<'a> {
     Stop,
 }
 
-/// Error not caused by the user invoking a command.
-#[derive(Error, Display, Debug)]
-#[display(Debug)]
-#[allow(dead_code)]
-pub(crate) enum ExecutionError {
-    GuildNotFoundById,
-    PlayerCreation(player::CreationError),
-    InvalidOption,
-    Play(anyhow::Error),
-    Pause(songbird::error::ControlError),
-    Resume(songbird::error::ControlError),
-}
-
-impl From<player::CreationError> for ExecutionError {
+impl From<player::CreationError> for InternalError {
     fn from(creation_error: player::CreationError) -> Self {
         Self::PlayerCreation(creation_error)
     }
 }
 
-pub(crate) struct Executor {
+type PlayerMap<S, V> = HashMap<GuildId, Arc<Mutex<Player<S, V>>>>;
+
+pub(crate) struct Executor<V: player::VoiceTickCallback> {
     http_client: reqwest::Client,
     /* It is not needed to store these two in this struct, but this way they are noted as a part of
     the state. */
@@ -80,18 +95,22 @@ pub(crate) struct Executor {
     #[allow(dead_code)]
     spotify_client: Arc<ClientCredsSpotify>,
     query_fetchers: [Box<dyn Fetcher + Send + Sync>; 4],
-    players: Mutex<HashMap<GuildId, Arc<Mutex<Player>>>>,
-    activity_manager: Arc<RwLock<activity::Manager>>,
+    players: Mutex<PlayerMap<Arc<Self>, V>>,
+    voice_tick_callback: Mutex<Option<V>>,
+    activity_manager: Arc<activity::Manager>,
 }
 
-impl Executor {
+impl<V: player::VoiceTickCallback> Executor<V> {
     pub(crate) async fn new(
-        spotify_api_credentials: rspotify::Credentials,
-        activity_manager: Arc<RwLock<activity::Manager>>,
+        on_voice_tick_callback: Option<V>,
+        activity_manager: Arc<activity::Manager>,
     ) -> Result<Self, ExecutorCreationError> {
         let http_client = reqwest::Client::new();
         let youtube_searcher = Arc::new(youtube::Searcher::new(http_client.clone()));
-        let spotify_client = Arc::new(ClientCredsSpotify::new(spotify_api_credentials));
+        let spotify_client = Arc::new(ClientCredsSpotify::new(rspotify::Credentials::new(
+            SPOTIFY_API_CLIENT_ID,
+            SPOTIFY_API_CLIENT_SECRET,
+        )));
         spotify_client
             .request_token()
             .await
@@ -118,37 +137,21 @@ impl Executor {
             ],
             players: Mutex::new(HashMap::new()),
             activity_manager,
+            voice_tick_callback: Mutex::new(on_voice_tick_callback),
         })
     }
 
     pub(crate) async fn execute<'a>(
-        &'a self,
+        self: &'a Arc<Self>,
         context: Context,
-        command: &'a CommandInteraction,
-    ) -> Result<Result<Executed<'a>, Error>, ExecutionError> {
-        let guild = match command.guild_id {
-            None => return Ok(Err(Error::NotInGuild)),
-            Some(guild_id) => guild_id
-                .to_guild_cached(context.cache.as_ref())
-                .ok_or(ExecutionError::GuildNotFoundById)?
-                .clone(),
-        };
-
-        let voice_channel_id = match guild
-            .voice_states
-            .get(&command.user.id)
-            .and_then(|voice_state| voice_state.channel_id)
-        {
-            None => return Ok(Err(Error::UserNotInVoiceChannel)),
-            Some(channel_id) => channel_id,
-        };
-
+        command: &'a Command,
+    ) -> Result<Executed<'a>, Error> {
         let player = {
             let player = self
                 .players
                 .lock()
                 .await
-                .get(guild.id.as_ref())
+                .get(&command.guild_id)
                 .map(Clone::clone);
 
             let player_is_stopped = match &player {
@@ -162,176 +165,121 @@ impl Executor {
                         Err(error) => {
                             error!("{error}");
                             player.lock().await.stop().await;
-                            return Ok(Err(Error::NotPlaying));
+                            Err(UserCausedError::NotPlaying)?;
                         }
                         Ok(player_voice_channel_id) => {
-                            if player_voice_channel_id != voice_channel_id.into() {
-                                return Ok(Err(Error::UserInDifferentVoiceChannel));
+                            if command.voice_channel_id.is_some_and(|voice_channel_id| {
+                                player_voice_channel_id != voice_channel_id.into()
+                            }) {
+                                Err(UserCausedError::UserInDifferentVoiceChannel)?;
                             }
                         }
                     }
                     player
                 }
-                _ => {
-                    if command.data.name != "hrat" {
-                        return Ok(Err(Error::NotPlaying));
-                    } else {
-                        match self
-                            .create_player(guild.id, voice_channel_id, command.channel_id, context)
-                            .await
-                        {
-                            Err(player::CreationError::ChannelJoin(error)) => {
-                                let error = Error::CouldNotJoin(error);
-                                error!("{error}");
-                                return Ok(Err(error));
-                            }
-                            Err(error) => Err(error)?,
-                            Ok(new_player) => new_player,
+                _ => match command.action {
+                    Action::Play {
+                        text_channel_id,
+                        voice_channel_id,
+                        ..
+                    } => match self
+                        .clone()
+                        .create_player(command.guild_id, voice_channel_id, text_channel_id, context)
+                        .await
+                    {
+                        Err(player::CreationError::ChannelJoin(error)) => {
+                            let error = UserCausedError::CouldNotJoin(error);
+                            error!("{error}");
+                            Err(error)?
                         }
-                    }
-                }
+                        Err(error) => Err(InternalError::PlayerCreation(error))?,
+                        Ok(new_player) => new_player,
+                    },
+                    _ => Err(UserCausedError::NotPlaying)?,
+                },
             }
         };
 
-        player.lock().await.set_text_channel_id(command.channel_id);
+        if let Some(text_channel_id) = command.text_channel_id {
+            player.lock().await.set_text_channel_id(text_channel_id);
+        }
 
-        let command_data_option = command.data.options.first();
-        match command.data.name.as_str() {
-            "hrat" => {
-                let query = command_data_option
-                    .and_then(|command_data_option| match &command_data_option.value {
-                        CommandDataOptionValue::String(value) => Some(value),
-                        _ => None,
-                    })
-                    .ok_or(ExecutionError::InvalidOption)?;
-                Ok(Ok(Executed::Play(
-                    self.play(&player, query)
-                        .await
-                        .map_err(ExecutionError::Play)?,
-                )))
+        Ok(match &command.action {
+            Action::Play { query, .. } | Action::VoicePlay { query } => Executed::Play(
+                self.fetch_and_enqueue_query(&player, query)
+                    .await
+                    .map_err(InternalError::Play)?,
+            ),
+            Action::QueueView => Executed::QueueView(player.lock().await.queue().clone()),
+            Action::QueueMove { index } => player
+                .lock()
+                .await
+                .queue_move(*index)
+                .await
+                .map(|_| Executed::QueueMove { index: *index })
+                .map_err(UserCausedError::QueueMove)?,
+            Action::QueueRepeat(repeat) => {
+                player.lock().await.queue_repeat(*repeat).await;
+                Executed::QueueRepeat(*repeat)
             }
-            "fronta" => {
-                let command_data_option =
-                    command_data_option.ok_or(ExecutionError::InvalidOption)?;
-                let subcommand_data_option_value = match &command_data_option.value {
-                    CommandDataOptionValue::SubCommand(subcommand_data_options) => {
-                        subcommand_data_options
-                            .first()
-                            .map(|subcommand_data_option| &subcommand_data_option.value)
-                    }
-                    _ => Err(ExecutionError::InvalidOption)?,
-                };
-                match command_data_option.name.as_str() {
-                    "zobrazit" => Ok(Ok(Executed::QueueView(player.lock().await.queue().clone()))),
-                    "posunout" => {
-                        let index = subcommand_data_option_value
-                            .and_then(|subcommand_data_option_value| {
-                                match subcommand_data_option_value {
-                                    CommandDataOptionValue::Integer(value) => value
-                                        .checked_sub(1)
-                                        .and_then(|value| usize::try_from(value).ok()),
-                                    _ => None,
-                                }
-                            })
-                            .ok_or(ExecutionError::InvalidOption)?;
-                        Ok(player
-                            .lock()
-                            .await
-                            .queue_move(index)
-                            .await
-                            .map(|_| Executed::QueueMove(index))
-                            .map_err(Error::QueueMove))
-                    }
-                    "opakovat" => {
-                        let repeat = subcommand_data_option_value
-                            .and_then(|subcommand_data_option_value| {
-                                match subcommand_data_option_value {
-                                    CommandDataOptionValue::Boolean(value) => Some(*value),
-                                    _ => None,
-                                }
-                            })
-                            .ok_or(ExecutionError::InvalidOption)?;
-                        player.lock().await.queue_repeat(repeat).await;
-                        Ok(Ok(Executed::QueueRepeat(repeat)))
-                    }
-                    "nahodne" => {
-                        player.lock().await.queue_shuffle().await;
-                        Ok(Ok(Executed::QueueShuffle))
-                    }
-                    _ => panic!(),
-                }
+            Action::QueueShuffle => {
+                player.lock().await.queue_shuffle().await;
+                Executed::QueueShuffle
             }
-            "dalsi" => Ok(player
+            Action::Next => player
                 .lock()
                 .await
                 .next()
                 .await
                 .map(|_| Executed::Next)
-                .map_err(Error::Next)),
-            "predchozi" => Ok(player
+                .map_err(UserCausedError::Next)?,
+            Action::Previous => player
                 .lock()
                 .await
                 .previous()
                 .await
                 .map(|_| Executed::Previous)
-                .map_err(Error::Previous)),
-            "pauza" => Ok(Ok(player
+                .map_err(UserCausedError::Previous)?,
+            Action::Pause => player
                 .lock()
                 .await
                 .pause()
                 .await
                 .map(|_| Executed::Pause)
-                .map_err(ExecutionError::Pause)?)),
-            "pokracovat" => Ok(Ok(player
+                .map_err(InternalError::Pause)?,
+            Action::Resume => player
                 .lock()
                 .await
                 .resume()
                 .await
                 .map(|_| Executed::Resume)
-                .map_err(ExecutionError::Resume)?)),
-            "opakovat" => {
-                let repeat = command
-                    .data
-                    .options
-                    .first()
-                    .and_then(|command_data_option| match command_data_option.value {
-                        CommandDataOptionValue::Boolean(value) => Some(value),
-                        _ => None,
-                    })
-                    .ok_or(ExecutionError::InvalidOption)?;
-                player.lock().await.repeat(repeat).await;
-                Ok(Ok(Executed::Repeat(repeat)))
+                .map_err(InternalError::Resume)?,
+            Action::Repeat(repeat) => {
+                player.lock().await.repeat(*repeat).await;
+                Executed::Repeat(*repeat)
             }
-            "stop" => {
+            Action::Stop => {
                 player.lock().await.stop().await;
-                Ok(Ok(Executed::Stop))
+                Executed::Stop
             }
-            _ => Err(ExecutionError::InvalidOption),
-        }
+        })
     }
 
     async fn create_player(
-        &self,
+        self: &Arc<Self>,
         guild_id: GuildId,
         voice_channel_id: ChannelId,
         text_channel_id: ChannelId,
         context: Context,
-    ) -> Result<Arc<Mutex<Player>>, player::CreationError> {
-        let activity_manager = self.activity_manager.clone();
+    ) -> Result<Arc<Mutex<Player<Arc<Self>, V>>>, player::CreationError> {
         let new_player = Player::new(
             self.http_client.clone(),
             guild_id,
             voice_channel_id,
             text_channel_id,
             context,
-            move |track, text_channel_id, context| {
-                Box::pin(Self::on_track_started_playing(
-                    activity_manager.clone(),
-                    track,
-                    text_channel_id,
-                    context,
-                ))
-            },
+            Some(self.clone()),
+            self.voice_tick_callback.lock().await.clone(),
         )
         .await?;
         self.players
@@ -342,9 +290,9 @@ impl Executor {
         Ok(new_player)
     }
 
-    async fn play<'a>(
-        &'a self,
-        player: &Arc<Mutex<Player>>,
+    async fn fetch_and_enqueue_query<'a>(
+        self: &'a Arc<Self>,
+        player: &Arc<Mutex<Player<Arc<Self>, V>>>,
         query: &'a str,
     ) -> anyhow::Result<Option<query::Fetched<'a>>> {
         for query_fetcher in self.query_fetchers.iter() {
@@ -373,15 +321,30 @@ impl Executor {
         Ok(None)
     }
 
-    async fn on_track_started_playing(
-        activity_manager: Arc<RwLock<activity::Manager>>,
-        track: Track,
-        text_channel_id: ChannelId,
-        context: Context,
-    ) {
-        _ = activity_manager
-            .read()
-            .await
+    pub(crate) async fn player_text_channel_id(&self, guild_id: &GuildId) -> Option<ChannelId> {
+        match self.players.lock().await.get(guild_id) {
+            None => None,
+            Some(player) => Some(player.lock().await.text_channel_id()),
+        }
+    }
+
+    pub(crate) async fn set_voice_tick_callback(&self, voice_tick_callback: Option<V>) {
+        *self.voice_tick_callback.lock().await = voice_tick_callback.clone();
+
+        for player in self.players.lock().await.values() {
+            player
+                .lock()
+                .await
+                .set_voice_tick_callback(voice_tick_callback.clone());
+        }
+    }
+}
+
+#[async_trait]
+impl<V: player::VoiceTickCallback> player::TrackStartedPlayingCallback for Arc<Executor<V>> {
+    async fn on_started_playing(&self, track: Track, text_channel_id: ChannelId, context: Context) {
+        _ = self
+            .activity_manager
             .set_current_playing_track(track.clone())
             .await
             .log_error();
