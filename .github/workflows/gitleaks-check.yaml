@@ -18,18 +18,14 @@ jobs:
       statuses: write
     steps:
       - name: GitLeaks installation
+        working-directory: /bin
         run: |
-          EXECUTABLE_DIRECTORY="$HOME/bin"
-          mkdir -p "$EXECUTABLE_DIRECTORY"
-          cd "$EXECUTABLE_DIRECTORY"
-          echo "$EXECUTABLE_DIRECTORY" >> "$GITHUB_PATH"
-
           set -e
 
-          VERSION="v8.25.1"
-          CHECKSUM="3000d057342489827ee127310771873000b658f2987be7bbd21968ab7443913a  gitleaks.tar.gz"
+          VERSION="v8.22.0"
+          CHECKSUM="3f95fef7e361adafed2b1bb9c591ba3bc6b595b4f296b346257301b7bf04be15  gitleaks.tar.gz"
 
-          wget -O "gitleaks.tar.gz" "https://github.com/gitleaks/gitleaks/releases/download/$VERSION/gitleaks_8.25.1_linux_x64.tar.gz"
+          wget -O "gitleaks.tar.gz" "https://github.com/gitleaks/gitleaks/releases/download/$VERSION/gitleaks_8.22.0_linux_arm64.tar.gz"
           echo "$CHECKSUM" | sha256sum --check
 
           tar xzf gitleaks.tar.gz

@@ -17,8 +17,12 @@ jobs:
       packages: read
       statuses: write
     steps:
+      - name: dependencies installation
+        run: >
+          apt-get update && apt-get install -y
+          cmake=3.22.1-1ubuntu1.22.04.2
       - name: Rust toolchain installation
-        uses: dtolnay/rust-toolchain@0d72692bcfbf448b1e2afa01a67f71b455a9dcec # 1.86.0
+        uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
         with:
           components: clippy, rustfmt
       - name: code checkout
@@ -30,6 +34,6 @@ jobs:
       - name: rustfmt check
         run: cargo fmt --all --check
       - name: Clippy check
-        run: cargo clippy --all-targets --all-features -- --deny warnings
+        run: cargo clippy --locked --all-targets --all-features -- --deny warnings
       - name: test check
-        run: cargo test --all --all-targets --all-features
+        run: cargo --locked test --all --all-targets --all-features

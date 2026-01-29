@@ -101,13 +101,11 @@ impl query::Fetcher for Fetcher {
         let playlist = match self.spotify_client.playlist(id.clone(), None, None).await {
             Ok(playlist) => playlist,
             Err(error) => {
-                // TODO: Use an if-let chain once they are stable.
-                if let ClientError::Http(error) = &error {
-                    if let HttpError::StatusCode(response) = error.as_ref() {
-                        if response.status().as_u16() == 404 {
-                            return Ok(None);
-                        }
-                    }
+                if let ClientError::Http(error) = &error
+                    && let HttpError::StatusCode(response) = error.as_ref()
+                    && response.status().as_u16() == 404
+                {
+                    return Ok(None);
                 }
 
                 Err(error)?

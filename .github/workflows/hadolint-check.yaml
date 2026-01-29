@@ -18,18 +18,14 @@ jobs:
       statuses: write
     steps:
       - name: hadolint installation
+        working-directory: /bin
         run: |
-          EXECUTABLE_DIRECTORY="$HOME/bin"
-          mkdir -p "$EXECUTABLE_DIRECTORY"
-          cd "$EXECUTABLE_DIRECTORY"
-          echo "$EXECUTABLE_DIRECTORY" >> "$GITHUB_PATH"
-
           set -e
 
           VERSION="v2.12.0"
-          CHECKSUM="56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010 hadolint"
+          CHECKSUM="5798551bf19f33951881f15eb238f90aef023f11e7ec7e9f4c37961cb87c5df6 hadolint"
 
-          wget -O hadolint "https://github.com/hadolint/hadolint/releases/download/$VERSION/hadolint-Linux-x86_64"
+          wget -O hadolint "https://github.com/hadolint/hadolint/releases/download/$VERSION/hadolint-Linux-arm64"
           echo "$CHECKSUM" | sha256sum --check
 
           chmod +x hadolint
