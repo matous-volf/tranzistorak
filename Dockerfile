@@ -1,5 +1,5 @@
-# 1.86.0-bookworm
-FROM rust@sha256:300ec56abce8cc9448ddea2172747d048ed902a3090e6b57babb2bf19f754081 AS builder
+# 1.92.0-bookworm
+FROM rust@sha256:e90e846de4124376164ddfbaab4b0774c7bdeef5e738866295e5a90a34a307a2 AS builder
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends cmake=3.25.1-1 \
@@ -8,7 +8,7 @@ RUN apt-get update \
 WORKDIR /usr/src/tranzistorak
 COPY . .
 
-RUN cargo install --path .
+RUN cargo install --locked --path .
 
 # bookworm-20250428-slim
 FROM debian@sha256:4b50eb66f977b4062683ff434ef18ac191da862dbe966961bc11990cf5791a8d AS runner

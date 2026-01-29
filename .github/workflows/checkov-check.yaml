@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.13.1"
       - name: Rust toolchain installation
-        uses: dtolnay/rust-toolchain@0579bb9e1907e560c2f263f705f93655a44a07e5
+        uses: dtolnay/rust-toolchain@9bc92bc5598b4f3bec5d910d352094982cb0c3b9 # 1.92.0
       - name: code checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:

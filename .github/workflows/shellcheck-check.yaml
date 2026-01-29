@@ -18,7 +18,7 @@ jobs:
       statuses: write
     steps:
       - name: ShellCheck installation
-        run: sudo apt-get update && sudo apt-get install -y shellcheck=0.8.0-2
+        run: apt-get update && apt-get install -y shellcheck=0.8.0-2
       - name: code checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:

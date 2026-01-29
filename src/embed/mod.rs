@@ -2,8 +2,7 @@ use crate::{command, embed, player};
 use serenity::builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter};
 use serenity::model::Color;
 
-const ICONS_BASE_URL: &str =
-    "https://raw.githubusercontent.com/matous-volf/tranzistorak/main/icons/";
+const ICONS_BASE_URL: &str = "https://gitea.com/matous-volf/tranzistorak/raw/branch/main/icons/";
 const QUEUE_VIEW_MAX_TRACKS: usize = 15;
 
 pub(crate) fn error(author_text: impl Into<String>, title: impl Into<String>) -> CreateEmbed {
