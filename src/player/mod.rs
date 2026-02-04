@@ -6,10 +6,10 @@ use rand::seq::SliceRandom;
 use serenity::all::{ChannelId, Context, GuildId};
 use serenity::async_trait;
 use songbird::error::JoinError;
+use songbird::events::context_data::VoiceTick;
 use songbird::input::YoutubeDl;
-use songbird::tracks::TrackHandle;
+use songbird::tracks::{PlayMode, TrackHandle};
 use songbird::{Call, CoreEvent, Event, EventContext, EventHandler, TrackEvent};
-use std::pin::Pin;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::Mutex;
@@ -17,10 +17,6 @@ use tokio::time::Duration;
 use unwrap_or_log::LogError;
 
 const DISCONNECT_STOP_TIMEOUT_DURATION: Duration = Duration::from_secs(1);
-
-// TODO: Make the callback accept references instead.
-type OnStartedPlayingCallbackFn =
-    dyn Fn(Track, ChannelId, Context) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync;
 
 #[derive(Error, Display, Debug)]
 #[display(Debug)]
@@ -61,36 +57,43 @@ pub(crate) struct Queue {
     pub(crate) current_playing_track_index: Option<usize>,
 }
 
-pub(crate) struct Player {
+#[async_trait]
+pub(crate) trait TrackStartedPlayingCallback: Send + Sync + Clone + 'static {
+    async fn on_started_playing(&self, track: Track, channel_id: ChannelId, context: Context);
+}
+
+#[async_trait]
+pub(crate) trait VoiceTickCallback: Send + Sync + Clone + 'static {
+    async fn on_voice_tick(&self, guild_id: GuildId, voice_tick: VoiceTick);
+}
+
+pub(crate) struct Player<S: TrackStartedPlayingCallback, V: VoiceTickCallback> {
     http_client: reqwest::Client,
     voice_driver: Arc<Mutex<Call>>,
     track_handle: Option<TrackHandle>,
+    guild_id: GuildId,
     text_channel_id: ChannelId,
     context: Context,
     queue: Queue,
     repeating: bool,
     repeating_queue: bool,
     is_stopped: bool,
-    on_started_playing_callback: Box<OnStartedPlayingCallbackFn>,
+    // TODO: Make the callbacks accept references instead.
+    track_started_playing_callback: Option<S>,
+    voice_tick_callback: Option<V>,
     rng: StdRng,
 }
 
-impl Player {
+impl<S: TrackStartedPlayingCallback, V: VoiceTickCallback> Player<S, V> {
     pub(crate) async fn new(
         http_client: reqwest::Client,
         guild_id: GuildId,
         voice_channel_id: ChannelId,
         text_channel_id: ChannelId,
         context: Context,
-        on_started_playing_callback: impl (Fn(
-            Track,
-            ChannelId,
-            Context,
-        ) -> Pin<Box<dyn Future<Output = ()> + Send>>)
-        + Send
-        + Sync
-        + 'static,
-    ) -> Result<Arc<Mutex<Player>>, CreationError> {
+        track_started_playing_callback: Option<S>,
+        voice_tick_callback: Option<V>,
+    ) -> Result<Arc<Mutex<Self>>, CreationError> {
         let manager = songbird::get(&context)
             .await
             .ok_or(CreationError::SongbirdClientRetrieval)?
@@ -103,13 +106,15 @@ impl Player {
             http_client,
             voice_driver,
             track_handle: None,
+            guild_id,
             text_channel_id,
             context,
             queue: Queue::default(),
             repeating: false,
             repeating_queue: false,
             is_stopped: false,
-            on_started_playing_callback: Box::new(on_started_playing_callback),
+            track_started_playing_callback,
+            voice_tick_callback,
             rng: StdRng::from_os_rng(),
         }));
 
@@ -117,14 +122,13 @@ impl Player {
         let player_clone = player_clone.lock().await;
         let mut voice_driver = player_clone.voice_driver.lock().await;
 
+        let voice_driver_event_handler = VoiceDriverEventHandler::new(player.clone());
+        voice_driver.add_global_event(TrackEvent::End.into(), voice_driver_event_handler.clone());
         voice_driver.add_global_event(
-            Event::Track(TrackEvent::End),
-            TrackEndHandler::new(player.clone()),
+            CoreEvent::DriverDisconnect.into(),
+            voice_driver_event_handler.clone(),
         );
-        voice_driver.add_global_event(
-            Event::Core(CoreEvent::DriverDisconnect),
-            DriverDisconnectHandler::new(player.clone()),
-        );
+        voice_driver.add_global_event(CoreEvent::VoiceTick.into(), voice_driver_event_handler);
 
         Ok(player)
     }
@@ -147,12 +151,11 @@ impl Player {
         let youtube_dl = YoutubeDl::new(self.http_client.clone(), track.youtube_url.clone());
         self.track_handle = Some(driver.play_only_input(youtube_dl.into()));
 
-        (self.on_started_playing_callback)(
-            track.clone(),
-            self.text_channel_id,
-            self.context.clone(),
-        )
-        .await;
+        if let Some(track_started_playing_callback) = self.track_started_playing_callback.as_ref() {
+            track_started_playing_callback
+                .on_started_playing(track.clone(), self.text_channel_id, self.context.clone())
+                .await;
+        }
     }
 
     pub(crate) async fn next(&mut self) -> Result<(), NextNoTrackError> {
@@ -271,6 +274,18 @@ impl Player {
         }
     }
 
+    async fn on_voice_tick(&self, voice_tick: VoiceTick) {
+        if let Some(voice_tick_callback) = self.voice_tick_callback.as_ref() {
+            voice_tick_callback
+                .on_voice_tick(self.guild_id, voice_tick)
+                .await;
+        }
+    }
+
+    pub(crate) fn set_voice_tick_callback(&mut self, voice_tick_callback: Option<V>) {
+        self.voice_tick_callback = voice_tick_callback
+    }
+
     pub(crate) async fn voice_channel_id(
         &self,
     ) -> Result<songbird::id::ChannelId, NoVoiceChannelIdError> {
@@ -283,6 +298,10 @@ impl Player {
             .ok_or(NoVoiceChannelIdError)
     }
 
+    pub(crate) fn text_channel_id(&self) -> ChannelId {
+        self.text_channel_id
+    }
+
     pub(crate) fn set_text_channel_id(&mut self, channel_id: ChannelId) {
         self.text_channel_id = channel_id
     }
@@ -292,41 +311,41 @@ impl Player {
     }
 }
 
-struct TrackEndHandler {
-    player: Arc<Mutex<Player>>,
+#[derive(Clone)]
+struct VoiceDriverEventHandler<S: TrackStartedPlayingCallback, V: VoiceTickCallback> {
+    player: Arc<Mutex<Player<S, V>>>,
 }
 
-impl TrackEndHandler {
-    fn new(player: Arc<Mutex<Player>>) -> Self {
+impl<S: TrackStartedPlayingCallback, V: VoiceTickCallback> VoiceDriverEventHandler<S, V> {
+    pub(crate) fn new(player: Arc<Mutex<Player<S, V>>>) -> Self {
         Self { player }
     }
 }
 
 #[async_trait]
-impl EventHandler for TrackEndHandler {
-    async fn act(&self, _: &EventContext<'_>) -> Option<Event> {
-        let mut player = self.player.lock().await;
-        if player.on_track_ended().await.log_error().is_err() {
-            player.stop().await;
-        };
-        None
-    }
-}
-
-struct DriverDisconnectHandler {
-    player: Arc<Mutex<Player>>,
-}
-
-impl DriverDisconnectHandler {
-    fn new(player: Arc<Mutex<Player>>) -> Self {
-        Self { player }
-    }
-}
-
-#[async_trait]
-impl EventHandler for DriverDisconnectHandler {
-    async fn act(&self, _: &EventContext<'_>) -> Option<Event> {
-        self.player.lock().await.on_disconnected().await;
+impl<S: TrackStartedPlayingCallback, V: VoiceTickCallback> EventHandler
+    for VoiceDriverEventHandler<S, V>
+{
+    async fn act(&self, context: &EventContext<'_>) -> Option<Event> {
+        match context {
+            EventContext::Track([(track_state, _)]) => {
+                if let PlayMode::End = track_state.playing {
+                    let mut player = self.player.lock().await;
+                    if player.on_track_ended().await.log_error().is_err() {
+                        player.stop().await
+                    }
+                }
+            }
+            EventContext::VoiceTick(voice_tick) => {
+                self.player
+                    .lock()
+                    .await
+                    .on_voice_tick(voice_tick.clone())
+                    .await;
+            }
+            EventContext::DriverDisconnect(_) => self.player.lock().await.on_disconnected().await,
+            _ => (),
+        }
         None
     }
 }
