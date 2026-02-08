@@ -3,7 +3,7 @@ use crate::{command, player};
 use serenity::builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter};
 use serenity::model::Color;
 
-const ICONS_BASE_URL: &str = "https://gitea.com/matous-volf/tranzistorak/raw/branch/main/icons/";
+const ICONS_BASE_URL: &str = "https://files.matousvolf.cz/public/tranzistorak/icons/";
 const QUEUE_VIEW_MAX_TRACKS: usize = 15;
 
 pub(crate) fn base(
