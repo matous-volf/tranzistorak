@@ -43,7 +43,7 @@ pub(crate) struct QueueMoveIndexExceedsQueueLengthError(pub(crate) usize);
 
 #[derive(Error, Display, Debug)]
 #[display(Debug)]
-pub(crate) struct NoVoiceChannelIdError;
+pub(crate) struct NoVoiceConnectionError;
 
 impl From<JoinError> for CreationError {
     fn from(join_error: JoinError) -> Self {
@@ -288,14 +288,13 @@ impl<S: TrackStartedPlayingCallback, V: VoiceTickCallback> Player<S, V> {
 
     pub(crate) async fn voice_channel_id(
         &self,
-    ) -> Result<songbird::id::ChannelId, NoVoiceChannelIdError> {
+    ) -> Result<songbird::id::ChannelId, NoVoiceConnectionError> {
         self.voice_driver
             .lock()
             .await
             .current_connection()
-            .ok_or(NoVoiceChannelIdError)?
-            .channel_id
-            .ok_or(NoVoiceChannelIdError)
+            .map(|connection| connection.channel_id)
+            .ok_or(NoVoiceConnectionError)
     }
 
     pub(crate) fn text_channel_id(&self) -> ChannelId {

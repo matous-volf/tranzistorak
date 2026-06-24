@@ -2,7 +2,7 @@ use crate::env::DISCORD_API_TOKEN;
 use crate::log::initialize_logger;
 use serenity::Client;
 use serenity::all::GatewayIntents;
-use songbird::driver::DecodeMode;
+use songbird::driver::{Channels, DecodeConfig, DecodeMode};
 use songbird::{Config, SerenityInit};
 use unwrap_or_log::LogError;
 
@@ -28,12 +28,9 @@ pub async fn run() {
 
     Client::builder(DISCORD_API_TOKEN, DISCORD_INTENTS)
         .event_handler(handler)
-        .register_songbird_from_config(
-            Config::default()
-                .decode_mode(DecodeMode::Decode)
-                .decode_channels(songbird::driver::Channels::Mono)
-                .decode_sample_rate(command::voice::SAMPLE_RATE),
-        )
+        .register_songbird_from_config(Config::default().decode_mode(DecodeMode::Decode(
+            DecodeConfig::new(Channels::Mono, command::voice::SAMPLE_RATE),
+        )))
         .await
         .log_error()
         .unwrap()

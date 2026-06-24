@@ -8,7 +8,7 @@ amplify_derive = "4.0.1"
 anyhow = "1.0.98"
 circular-queue = "0.2.7"
 cpal = "0.15.3"
-ct2rs = { git = "https://github.com/matous-volf/ctranslate2-rs", features = ["whisper"] }
+ct2rs = { version = "0.9.19", features = ["whisper"] }
 deunicode = "1.6.2"
 ftail = { version = "0.3.0", features = ["timezone"] }
 futures = "0.3.31"
@@ -20,8 +20,10 @@ rand = "0.9.1"
 reqwest = "0.12.15"
 rspotify = { version = "0.14.0" }
 rustypipe = "0.11.4"
-serenity = { version = "0.12.4", features = ["model", "cache"] }
-songbird = { version = "0.5.0", default-features = true, features = ["receive"] }
+serenity = { version = "0.12.5", features = ["model", "cache"] }
+songbird = { version = "0.6.0", default-features = true, features = [
+    "receive",
+] }
 symphonia = { version = "0.5.4", features = ["all"] }
 thiserror = "2.0.12"
 tokio = { version = "1.45.0", features = ["rt-multi-thread"] }
