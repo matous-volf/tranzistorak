@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+[allowlist]
+matchCondition = "AND"
+paths = [
+    '''Cargo\.lock$'''
+]
+regexes = [
+    '''libcrux-sha3'''
+]
