@@ -1,0 +1,20 @@
+---
+name: Dotenv-linter check
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, reopened, synchronize]
+permissions: {}
+jobs:
+  check:
+    name: Dotenv-linter check
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Code checkout
+        uses: https://github.com/actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Check
+        uses: https://codeberg.org/matous-volf/action-dotenv-linter-check@018ced01527013318fe91855166413257efacf84 # v1.0.0

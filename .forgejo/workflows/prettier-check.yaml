@@ -1,0 +1,20 @@
+---
+name: Prettier check
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, reopened, synchronize]
+permissions: {}
+jobs:
+  check:
+    name: Prettier check
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Code checkout
+        uses: https://github.com/actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Check
+        uses: https://codeberg.org/matous-volf/action-prettier-check@7de02bb99890439bca94ea33a344557ca8e04deb # v2.0.0
