@@ -1,0 +1,13 @@
+---
+name: Conventional pull request title check
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    types: [opened, reopened, synchronize]
+permissions: {}
+jobs:
+  check:
+    name: Conventional pull request title check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check
+        uses: https://codeberg.org/matous-volf/action-conventional-pull-request-title-check@8ecbe0bf3457cb61cbd789b8e316ef4728fdf707 # v1.0.0

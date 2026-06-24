@@ -1,6 +1,5 @@
 services:
-  tranzistorak:
-    container_name: tranzistorak
+  app:
     build: .
     volumes:
       - ./logs:/srv/bot/logs
