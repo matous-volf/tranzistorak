@@ -42,7 +42,7 @@ impl Manager {
             ActivityData::playing("YouTube a Spotify"),
             ActivityData::playing("videa i playlisty"),
             ActivityData::watching("svobodný a otevřený software!"),
-            ActivityData::watching("gitea.com/matous-volf/tranzistorak"),
+            ActivityData::watching("codeberg.org/matous-volf/tranzistorak"),
         ];
 
         for activity in idle_activities.iter().cycle() {
