@@ -1,4 +1,4 @@
-FROM rust:1.96.0-trixie@sha256:e7336b1e0bb2290b0d7bfd3ce1237bf11e5c2ae937ee3e250e6554b98338bea6 AS builder
+FROM rust:1.96.0-trixie@sha256:f705b1c149afe6e0d44235b8f68cbf8bb780af65facecefd65c48decadbd1999 AS builder
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
