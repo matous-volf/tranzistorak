@@ -7,7 +7,7 @@ edition = "2024"
 amplify_derive = "4.0.1"
 anyhow = "1.0.98"
 circular-queue = "0.2.7"
-cpal = "0.15.3"
+cpal = "0.18.0"
 ct2rs = { version = "0.9.19", features = ["whisper"] }
 deunicode = "1.6.2"
 ftail = { version = "0.3.0", features = ["timezone"] }
