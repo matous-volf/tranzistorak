@@ -24,7 +24,7 @@ serenity = { version = "0.12.5", features = ["model", "cache"] }
 songbird = { version = "0.6.0", default-features = true, features = [
     "receive",
 ] }
-symphonia = { version = "0.6.0", features = ["all"] }
+symphonia = { version = "0.5.5", features = ["all"] }
 thiserror = "2.0.12"
 tokio = { version = "1.45.0", features = ["rt-multi-thread"] }
 unwrap_or_log = "0.2.0"
