@@ -16,9 +16,9 @@ jobs:
           DEPENDENCIES=(
             # renovate: repology=ubuntu_24_04/cmake
             cmake=3.28.3-1build7
-            # renovate: repology=ubuntu_24_04/alsa-lib
+            # renovate: repology=ubuntu_24_04/libasound2-dev
             libasound2-dev=1.2.11-1ubuntu0.2
-            # renovate: repology=ubuntu_24_04/oniguruma
+            # renovate: repology=ubuntu_24_04/libonig-dev
             libonig-dev=6.9.9-1build1
           )
           apt-get update && apt-get install -y "${DEPENDENCIES[@]}"
