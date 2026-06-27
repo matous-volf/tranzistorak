@@ -1,45 +1,50 @@
-FROM rust:1.96.0-trixie@sha256:6df234c1eb92b0545468fab8c18fc5f9adfb994e7d4f67d81d45fe2fcabf5657 AS builder
+FROM rust:1.96.0-alpine3.24@sha256:f87aa870663e2b57ec8c69de82c7eedf7383bee987eef7612c0359635eaadb41 AS builder
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-    # renovate: repology=debian_13/cmake
-    cmake=3.31.6-2 \
-    # renovate: repology=debian_13/libasound2-dev
-    libasound2-dev=1.2.14-1 \
-    # renovate: repology=debian_13/libonig-dev
-    libonig-dev=6.9.9-1+b1 \
- && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache \
+    # renovate: repology=alpine_3_24/alsa-lib-dev
+    alsa-lib-dev=1.2.15.3-r0 \
+    # renovate: repology=alpine_3_24/cmake
+    cmake=4.2.3-r0 \
+    # renovate: repology=alpine_3_24/build-base
+    build-base=0.5-r4 \
+    # renovate: repology=alpine_3_24/g++
+    g++=15.2.0-r5 \
+    # renovate: repology=alpine_3_24/oniguruma-dev
+    oniguruma-dev=6.9.10-r0 \
+    # renovate: repology=alpine_3_24/openssl-dev
+    openssl-dev=3.5.7-r0
 
 WORKDIR /usr/src/tranzistorak
 COPY . .
 
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+ENV CXXFLAGS="-D_LARGEFILE64_SOURCE -Dstat64=stat -Dfstat64=fstat"
 RUN cargo install --locked --path .
 
-FROM debian:trixie-20260623@sha256:d07d1b51c39f51188e60be9b64e6bf769fa94e187f092bc32b91305cfa34ba5a AS runner
+FROM alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS runner
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-    # renovate: repology=debian_13/libasound2-dev
-    libasound2-dev=1.2.14-1 \
-    # renovate: repology=debian_13/libonig-dev
-    libonig-dev=6.9.9-1+b1 \
-    # renovate: repology=debian_13/libopus-dev
-    libopus-dev=1.5.2-2 \
-    # renovate: repology=debian_13/pipx
-    pipx=1.7.1-1 \
- && rm -rf /var/lib/apt/lists/* \
- && useradd -m -u 1000 botuser \
+RUN apk add --no-cache \
+    # renovate: repology=alpine_3_24/alsa-lib
+    alsa-lib=1.2.15.3-r0 \
+    # renovate: repology=alpine_3_24/libgcc
+    libgcc=15.2.0-r5 \
+    # renovate: repology=alpine_3_24/libstdc++
+    libstdc++=15.2.0-r5 \
+    # renovate: repology=alpine_3_24/oniguruma
+    oniguruma=6.9.10-r0 \
+    # renovate: repology=alpine_3_24/openssl
+    openssl=3.5.7-r0 \
+    # renovate: repology=alpine_3_24/opus
+    opus=1.6.1-r0 \
+    # renovate: repology=alpine_3_24/yt-dlp
+    yt-dlp=2026.06.09-r0 \
+ && adduser -D -u 1000 botuser \
  && mkdir -p /srv/bot/logs /srv/bot/rusty_pipe_storage \
  && chown -R botuser:botuser /srv/bot
 
 COPY --from=builder /usr/local/cargo/bin/tranzistorak /srv/bot/tranzistorak
 
 USER botuser
-
-# Unpinned in order to have the latest version.
-# hadolint ignore=DL3013
-RUN pipx install yt-dlp
-ENV PATH="/home/botuser/.local/bin:${PATH}"
 
 #checkov:skip=CKV_DOCKER_2: No healthcheck.
 

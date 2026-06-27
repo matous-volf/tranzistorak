@@ -1,6 +1,5 @@
 use ftail::Ftail;
 use ftail::error::FtailError;
-use iana_time_zone::get_timezone;
 use log::LevelFilter;
 use std::fs;
 use std::path::Path;
@@ -16,12 +15,6 @@ pub(crate) fn initialize_logger() -> Result<(), FtailError> {
     }
 
     let ftail = Ftail::new()
-        .timezone(
-            get_timezone()
-                .unwrap_or_else(|error| panic!("on getting the timezone: {}", error))
-                .parse()
-                .unwrap(),
-        )
         .console(LevelFilter::Warn)
         .daily_file(daily_file_path, LevelFilter::Warn)
         .retention_days(DAILY_RETENTION_DAYS_COUNT);
