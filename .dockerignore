@@ -1,6 +1,8 @@
-/.dockerignore
-/Dockerfile
-/docker-compose.yaml
+/**
 
-/target
-/node_modules
+!/src/**
+!/.cargo/**
+!/.env
+!/.env.example
+!/Cargo.toml
+!/Cargo.lock
