@@ -2,7 +2,7 @@
 name: Conventional pull request title check
 on: # yamllint disable-line rule:truthy
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, edited, reopened, synchronize]
 permissions: {}
 jobs:
   check:
