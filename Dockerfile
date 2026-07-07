@@ -37,7 +37,7 @@ RUN apk add --no-cache \
     # renovate: repology=alpine_3_24/opus
     opus=1.6.1-r0 \
     # renovate: repology=alpine_3_24/yt-dlp
-    yt-dlp=2026.06.09-r0 \
+    yt-dlp=2026.07.04-r0 \
  && adduser -D -u 1000 botuser \
  && mkdir -p /srv/bot/logs /srv/bot/rusty_pipe_storage \
  && chown -R botuser:botuser /srv/bot
