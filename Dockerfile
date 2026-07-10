@@ -1,4 +1,4 @@
-FROM rust:1.96.1-alpine3.24@sha256:a41f7740f8b45d45795624eec13a8b42263cc700f19f7e4e86e04d3dda08a479 AS builder
+FROM rust:1.97.0-alpine3.24@sha256:ec9c91e77119ce498cd1e87d96d77e0f75b2cee21655a29bc2bf75a51a2b20a4 AS builder
 
 RUN apk add --no-cache \
     # renovate: repology=alpine_3_24/alsa-lib-dev
