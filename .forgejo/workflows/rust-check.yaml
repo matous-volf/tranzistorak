@@ -32,7 +32,8 @@ jobs:
         run: ln -s .env.example .env
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-rust-check@f0c0a5b4c3079b21f07a684d9c9b7ef642097f1a # v1.0.0
+        uses: https://codeberg.org/matous-volf/action-rust-check@8269a908a15f836b84679c73dfd349ddebfe9bb1 # v7.0.0
         with:
           rust_version: 1.97.1
           run_tests: false
+          lint_docs: false
