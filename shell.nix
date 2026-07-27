@@ -4,7 +4,7 @@ let
   };
   rust-overlay = fetchGit {
     url = "https://github.com/oxalica/rust-overlay";
-    rev = "068175006cfb69d5b541a140ed93e361488c9e53";
+    rev = "c67ce00525464a710971351c183ce67acb6ca827";
     ref = "master";
   };
   toolchain = pkgs.rust-bin.fromRustupToolchainFile ./toolchain.toml;
