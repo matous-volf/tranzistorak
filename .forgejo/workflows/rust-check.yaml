@@ -11,29 +11,32 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Dependencies installation
-        run: |
-          DEPENDENCIES=(
-            # renovate: repology=ubuntu_24_04/cmake
-            cmake=3.28.3-1build7
-            # renovate: repology=ubuntu_24_04/alsa-lib
-            libasound2-dev=1.2.11-1ubuntu0.3
-            # renovate: repology=ubuntu_24_04/libonig-dev
-            libonig-dev=6.9.9-1build1
-          )
-          apt-get update && apt-get install -y "${DEPENDENCIES[@]}"
-
       - name: Code checkout
         uses: https://github.com/actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
-      - name: .env symlink creation
-        run: ln -s .env.example .env
-
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-rust-check@8269a908a15f836b84679c73dfd349ddebfe9bb1 # v7.0.0
+        uses: https://codeberg.org/matous-volf/action-rust-check@22eeec5f8e9c53a52b11c34de20c1feb4b26fcc4 # v9.0.0
         with:
-          rust_version: 1.97.1
+          system_dependencies: |
+            # renovate: repology=alpine_3_24/alsa-lib-dev
+            alsa-lib-dev=1.2.15.3-r0
+            # renovate: repology=alpine_3_24/cmake
+            cmake=4.2.3-r0
+            # renovate: repology=alpine_3_24/build-base
+            build-base=0.5-r4
+            # renovate: repology=alpine_3_24/g++
+            g++=15.2.0-r5
+            # renovate: repology=alpine_3_24/oniguruma-dev
+            oniguruma-dev=6.9.10-r0
+            # renovate: repology=alpine_3_24/openssl-dev
+            openssl-dev=3.5.7-r0
+          pre_command: |
+            ln -s .env.example .env
+            export RUSTFLAGS="-C target-feature=-crt-static"
+            export CXXFLAGS="-D_LARGEFILE64_SOURCE -Dstat64=stat -Dfstat64=fstat"
           run_tests: false
           lint_docs: false
+          check_semver: false
+          check_msrv: false
