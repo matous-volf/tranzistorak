@@ -2,28 +2,52 @@
 name = "tranzistorak"
 version = "3.4.1"
 edition = "2024"
+license = "AGPL-3.0-only"
 
 [dependencies]
-amplify_derive = "4.0.1"
-anyhow = "1.0.98"
-circular-queue = "0.2.7"
-cpal = "0.18.0"
-ct2rs = { version = "0.9.19", features = ["whisper"] }
-deunicode = "1.6.2"
-ftail = { version = "0.3.0", features = ["timezone"] }
-futures = "0.3.31"
-hf-hub = "0.5.0"
-load-dotenv = "0.1.2"
-log = "0.4.27"
-rand = "0.9.1"
-reqwest = "0.12.15"
-rspotify = { version = "0.14.0" }
-rustypipe = "0.11.4"
-serenity = { version = "0.12.5", features = ["model", "cache"] }
-songbird = { version = "0.6.0", default-features = true, features = [
+amplify_derive = { version = "4.0.1", default-features = false }
+anyhow = { version = "1.0.98", default-features = false }
+circular-queue = { version = "0.2.7", default-features = false }
+cpal = { version = "0.18.0", default-features = false }
+ct2rs = { version = "0.9.19", default-features = false, features = [
+    "ruy",
+    "whisper",
+] }
+deunicode = { version = "1.6.2", default-features = false, features = [
+    "alloc",
+] }
+ftail = { version = "0.3.1", default-features = false, features = [
+    "console",
+    "daily_file",
+] }
+hf-hub = { version = "0.5.0", default-features = false, features = ["tokio"] }
+load-dotenv = { version = "0.1.2", default-features = false }
+log = { version = "0.4.27", default-features = false }
+rand = { version = "0.9.1", default-features = false }
+reqwest = { version = "0.12.15", default-features = false }
+rspotify = { version = "0.14.0", default-features = false, features = [
+    "client-reqwest",
+] }
+# Fixes a cargo-deny warning. Once merged into upstream, can be replaced.
+rustypipe = { git = "https://codeberg.org/matous-volf/rustypipe", branch = "docs/update-deprecated-license", default-features = false }
+serenity = { version = "0.12.5", default-features = false, features = [
+    "model",
+    "cache",
+] }
+songbird = { version = "0.6.0", default-features = false, features = [
+    "driver",
+    "gateway",
     "receive",
+    "rustls",
+    "serenity",
+    "tungstenite",
 ] }
 symphonia = { version = "0.5.5", features = ["all"] }
-thiserror = "2.0.12"
-tokio = { version = "1.45.0", features = ["rt-multi-thread"] }
-unwrap_or_log = "0.2.0"
+thiserror = { version = "2.0.12", default-features = false }
+tokio = { version = "1.45.0", default-features = false }
+unwrap_or_log = { version = "0.2.0", default-features = false }
+
+[package.metadata.cargo-machete]
+# Needed by Songbird, see
+# https://github.com/serenity-rs/songbird/tree/5d46185511316b8efb3c65a1104e149e4df557cd#codec-support.
+ignored = ["symphonia"]
