@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-rust-check@22eeec5f8e9c53a52b11c34de20c1feb4b26fcc4 # v9.0.0
+        uses: https://codeberg.org/matous-volf/action-rust-check@5517683cc7ee0d9e7bef7655705ab6c115c9bba1 # v12.1.0
         with:
           system_dependencies: |
             # renovate: repology=alpine_3_24/alsa-lib-dev
@@ -36,7 +36,8 @@ jobs:
             ln -s .env.example .env
             export RUSTFLAGS="-C target-feature=-crt-static"
             export CXXFLAGS="-D_LARGEFILE64_SOURCE -Dstat64=stat -Dfstat64=fstat"
-          run_tests: false
+          check_advisories: false
           lint_docs: false
+          run_tests: false
           check_semver: false
           check_msrv: false

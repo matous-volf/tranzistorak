@@ -1,0 +1,21 @@
+[bans]
+multiple-versions = "allow"
+
+[licenses]
+allow = [
+    "AGPL-3.0-only",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0",
+    "GPL-3.0-only",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 1.0
+
+[sources]
+# See the comment in Cargo.toml.
+allow-git = ["https://codeberg.org/matous-volf/rustypipe"]
