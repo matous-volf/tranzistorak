@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-rust-check@5517683cc7ee0d9e7bef7655705ab6c115c9bba1 # v12.1.0
+        uses: https://codeberg.org/matous-volf/action-rust-check@e576fcba4263df014865852c7908ff474848e977 # v13.0.0
         with:
           system_dependencies: |
             # renovate: repology=alpine_3_24/alsa-lib-dev
