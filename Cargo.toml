@@ -9,7 +9,7 @@ amplify_derive = { version = "4.0.1", default-features = false }
 anyhow = { version = "1.0.98", default-features = false }
 circular-queue = { version = "0.2.7", default-features = false }
 cpal = { version = "0.18.0", default-features = false }
-ct2rs = { version = "0.9.19", default-features = false, features = [
+ct2rs = { version = "0.10.0", default-features = false, features = [
     "ruy",
     "whisper",
 ] }
