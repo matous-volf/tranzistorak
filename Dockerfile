@@ -12,7 +12,7 @@ RUN apk add --no-cache \
     # renovate: repology=alpine_3_24/oniguruma-dev
     oniguruma-dev=6.9.10-r0 \
     # renovate: repology=alpine_3_24/openssl-dev
-    openssl-dev=3.5.7-r0
+    openssl-dev=3.5.9-r0
 
 WORKDIR /usr/src/tranzistorak
 COPY . .
@@ -33,11 +33,11 @@ RUN apk add --no-cache \
     # renovate: repology=alpine_3_24/oniguruma
     oniguruma=6.9.10-r0 \
     # renovate: repology=alpine_3_24/openssl
-    openssl=3.5.7-r0 \
+    openssl=3.5.9-r0 \
     # renovate: repology=alpine_3_24/opus
     opus=1.6.1-r0 \
     # renovate: repology=alpine_3_24/yt-dlp
-    yt-dlp=2026.07.04-r0 \
+    yt-dlp=2026.08.19-r0 \
  && adduser -D -u 1000 botuser \
  && mkdir -p /srv/bot/logs /srv/bot/rusty_pipe_storage \
  && chown -R botuser:botuser /srv/bot
