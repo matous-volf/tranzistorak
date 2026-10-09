@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-rust-check@89a31dc65ef1d8d666da28b061da4d536c58494a # v14.0.0
+        uses: https://codeberg.org/matous-volf/action-rust-check@b2359d77beeb4b0fdd707a654ee1391311e53013 # v16.0.0
         with:
           system_dependencies: |
             # renovate: repology=alpine_3_24/alsa-lib-dev
@@ -31,7 +31,7 @@ jobs:
             # renovate: repology=alpine_3_24/oniguruma-dev
             oniguruma-dev=6.9.10-r0
             # renovate: repology=alpine_3_24/openssl-dev
-            openssl-dev=3.5.7-r0
+            openssl-dev=3.5.9-r0
           pre_command: |
             ln -s .env.example .env
             export RUSTFLAGS="-C target-feature=-crt-static"

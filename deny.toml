@@ -18,4 +18,4 @@ confidence-threshold = 1.0
 
 [sources]
 # See the comment in Cargo.toml.
-allow-git = ["https://codeberg.org/matous-volf/rustypipe"]
+allow-git = ["https://codeberg.org/ThetaDev/rustypipe"]

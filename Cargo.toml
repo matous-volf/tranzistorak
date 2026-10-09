@@ -28,8 +28,8 @@ reqwest = { version = "0.12.15", default-features = false }
 rspotify = { version = "0.14.0", default-features = false, features = [
     "client-reqwest",
 ] }
-# Fixes a cargo-deny warning. Once merged into upstream, can be replaced.
-rustypipe = { git = "https://codeberg.org/matous-volf/rustypipe", branch = "docs/update-deprecated-license", default-features = false }
+# Fixes a cargo-deny license warning. Once released on crates.io, can be replaced.
+rustypipe = { git = "https://codeberg.org/ThetaDev/rustypipe", version = "0.11.4", default-features = false }
 serenity = { version = "0.12.5", default-features = false, features = [
     "model",
     "cache",

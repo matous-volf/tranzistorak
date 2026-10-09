@@ -1,6 +1,8 @@
 use serenity::all::{Command, CommandOptionType, Context, CreateCommand, CreateCommandOption};
 
-pub(crate) async fn register_global_commands(context: &Context) -> serenity::Result<Vec<Command>> {
+pub(crate) async fn register_global_commands(
+    context: &Context,
+) -> Result<Vec<Command>, Box<serenity::Error>> {
     Command::set_global_commands(&context.http, vec![
         CreateCommand::new("hrat")
             .description("Zařadí do fronty položku z odkazu nebo hledání.")
@@ -72,5 +74,5 @@ pub(crate) async fn register_global_commands(context: &Context) -> serenity::Res
         CreateCommand::new("stop")
             .description("Zastaví přehrávání, odstraní všechny položky ve frontě a opustí hlasový kanál.")
             .dm_permission(false),
-    ]).await
+    ]).await.map_err(Box::new)
 }

@@ -26,7 +26,11 @@ impl Manager {
         new
     }
 
-    pub(crate) async fn set_current_playing_track(&self, track: Track) -> serenity::Result<()> {
+    pub(crate) async fn set_current_playing_track(
+        &self,
+        track: Track,
+        // Box to address Clippy's result_large_err.
+    ) -> Result<(), Box<serenity::Error>> {
         self.context.set_activity(Some(ActivityData::streaming(
             track.title,
             track.youtube_url,
