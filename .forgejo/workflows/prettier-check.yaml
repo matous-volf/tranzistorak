@@ -17,4 +17,4 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-prettier-check@7de02bb99890439bca94ea33a344557ca8e04deb # v2.0.0
+        uses: https://codeberg.org/matous-volf/action-prettier-check@7eb4eafbc38ed361437517cce5b5f2c3ee8babc9 # v2.0.1
