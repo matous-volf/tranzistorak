@@ -17,4 +17,4 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-actionlint-check@b58e80f3900e7d711007332d05c592f8ba4b0ef2 # v1.0.1
+        uses: https://codeberg.org/matous-volf/action-actionlint-check@dade5c7f1c6ee270dd6234dd054280a980320b27 # v1.0.2
