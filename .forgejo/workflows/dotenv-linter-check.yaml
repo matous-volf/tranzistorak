@@ -17,4 +17,4 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-dotenv-linter-check@018ced01527013318fe91855166413257efacf84 # v1.0.0
+        uses: https://codeberg.org/matous-volf/action-dotenv-linter-check@95ea02ba200340cea285a2396d821afc8bd64caf # v1.0.1
