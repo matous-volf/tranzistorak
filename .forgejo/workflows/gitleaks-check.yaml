@@ -17,4 +17,4 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-gitleaks-check@2dbff71c840697bb4fcb39c3f1a0ef5fdec58db9 # v1.0.0
+        uses: https://codeberg.org/matous-volf/action-gitleaks-check@4d325f9faaaddc4fee768635483b2bde0c111bef # v1.0.1
