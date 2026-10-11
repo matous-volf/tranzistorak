@@ -44,6 +44,7 @@ RUN apk add --no-cache \
 
 COPY --from=builder /usr/local/cargo/bin/tranzistorak /srv/bot/tranzistorak
 
+# hadolint ignore=DL3066
 USER botuser
 
 #checkov:skip=CKV_DOCKER_2: No healthcheck.
