@@ -17,4 +17,4 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-shellcheck-check@7ebe7977e7f044d331c71801013a72addb9d7655 # v1.0.0
+        uses: https://codeberg.org/matous-volf/action-shellcheck-check@fcde8a06635b90ed02140794e72cbeff4dd0b998 # v1.0.1
