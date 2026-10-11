@@ -17,4 +17,4 @@ jobs:
           fetch-depth: 0
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-yamllint-check@b3e621e3b0ce859fc378a4a03ca9f5607a923189 # v1.0.0
+        uses: https://codeberg.org/matous-volf/action-yamllint-check@65bf6a432226e5f144f4980a4ec8590d8e898909 # v1.0.1
