@@ -21,7 +21,7 @@ ENV RUSTFLAGS="-C target-feature=-crt-static"
 ENV CXXFLAGS="-D_LARGEFILE64_SOURCE -Dstat64=stat -Dfstat64=fstat"
 RUN cargo install --locked --path .
 
-FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS runner
+FROM alpine:3.24.3@sha256:b3413572228e34bd1c9245f5565e6cd127005655e8a7899aef33d8e83255c9e6 AS runner
 
 RUN apk add --no-cache \
     # renovate: repology=alpine_3_24/alsa-lib
