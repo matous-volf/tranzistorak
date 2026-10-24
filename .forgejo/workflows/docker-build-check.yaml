@@ -20,6 +20,6 @@ jobs:
         run: ln -s .env.example .env
 
       - name: Check
-        uses: https://codeberg.org/matous-volf/action-docker-build-check@448ff235622c8a40cd82c72db2cb906e2cff1eb0 # v4.0.1
+        uses: https://codeberg.org/matous-volf/action-docker-build-check@549ff3bfe35db98ead0d55864fe30a99f9d78077 # v5.0.0
         with:
           compose_file: docker-compose.yaml
