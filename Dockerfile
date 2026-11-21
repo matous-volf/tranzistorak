@@ -12,7 +12,7 @@ RUN apk add --no-cache \
     # renovate: repology=alpine_3_24/oniguruma-dev
     oniguruma-dev=6.9.10-r0 \
     # renovate: repology=alpine_3_24/openssl-dev
-    openssl-dev=3.5.9-r0
+    openssl-dev=3.5.9-r1
 
 WORKDIR /usr/src/tranzistorak
 COPY . .
@@ -33,7 +33,7 @@ RUN apk add --no-cache \
     # renovate: repology=alpine_3_24/oniguruma
     oniguruma=6.9.10-r0 \
     # renovate: repology=alpine_3_24/openssl
-    openssl=3.5.9-r0 \
+    openssl=3.5.9-r1 \
     # renovate: repology=alpine_3_24/opus
     opus=1.6.1-r0 \
     # renovate: repology=alpine_3_24/yt-dlp

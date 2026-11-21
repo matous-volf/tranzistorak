@@ -31,7 +31,7 @@ jobs:
             # renovate: repology=alpine_3_24/oniguruma-dev
             oniguruma-dev=6.9.10-r0
             # renovate: repology=alpine_3_24/openssl-dev
-            openssl-dev=3.5.9-r0
+            openssl-dev=3.5.9-r1
           pre_command: |
             ln -s .env.example .env
             export RUSTFLAGS="-C target-feature=-crt-static"
